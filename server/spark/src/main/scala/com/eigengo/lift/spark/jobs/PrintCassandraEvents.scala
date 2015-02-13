@@ -28,6 +28,6 @@ case class PrintCassandraEvents() extends Batch[Int, Unit] {
 
     sc.stop()
 
-    Right()
+    Right((): Unit)
   }
 }

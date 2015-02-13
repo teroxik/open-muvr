@@ -34,8 +34,8 @@ echo "worker started"
 echo "starting driver"
 nohup java -jar /app/spark-assembly-1.0.0-SNAPSHOT.jar &
 
-while [ 1 ];
-do
-	tail -f /opt/spark-${SPARK_VERSION}/logs/*.out
-        sleep 1
-done
+#while [ 1 ];
+#do
+#	tail -f /opt/spark-${SPARK_VERSION}/logs/*.out
+#        sleep 1
+#done
