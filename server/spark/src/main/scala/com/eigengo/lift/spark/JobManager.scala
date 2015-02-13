@@ -2,7 +2,7 @@ package com.eigengo.lift.spark
 
 import akka.actor.{ActorLogging, Props, Actor}
 import com.eigengo.lift.spark.JobManagerProtocol.{BatchJobSubmit, StreamJobSubmit, JobManagerProtocol}
-import com.eigengo.lift.spark.jobs.{Job, PrintSequence}
+import com.eigengo.lift.spark.jobs.{Job, PrintCassandraEvents}
 import com.typesafe.config.Config
 import org.apache.log4j.Logger
 
@@ -36,7 +36,7 @@ class JobManager(
       case StreamJobSubmit(d) =>
         println(s"stream $d")
       case BatchJobSubmit("PrintSequence") =>
-        submit(Job[PrintSequence], 10000)
+        submit(Job[PrintCassandraEvents], 10000)
       case x @ _ => log.warning(s"Not a job $x")
     }
 

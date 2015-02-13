@@ -1,12 +1,14 @@
 /**
  * Based on https://github.com/kevinschmidt/docker-spark
  *
- * If made dependent on common results on large amount of new dependency conflicts
- * Including akka etc.
- * 
- * If Spark version 1.2.0 used again large amount of new dependency conflicts
+ * Currently uses spark 1.2.0, Scala 2.11
  *
- * Potentially upgradeable to Scala 2.11
+ * If made dependent on common results on large amount of new dependency conflicts including akka etc.
+ *
+ * Large amount of files causes "Invalid or Corrupt jarfile is encountered" due to bug in java 7
+ * Possible workarounds include use of java 8 (current solution) or startup using java -cp instead of java -jar
+ * See http://stackoverflow.com/questions/18441076/why-java-complains-about-jar-files-with-lots-of-entries
+ *
  */
 
 import Dependencies._
@@ -40,7 +42,7 @@ dockerfile in docker := {
   val artifact = (outputPath in assembly).value
   val artifactTargetPath = s"/app/${artifact.name}"
   new Dockerfile {
-    from("java:openjdk-8-jdk")
+    from("martinz/sparksinglenode")
     add(artifact, artifactTargetPath)
     entryPoint("java", "-jar", artifactTargetPath)
   }

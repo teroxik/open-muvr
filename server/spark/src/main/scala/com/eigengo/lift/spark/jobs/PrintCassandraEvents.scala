@@ -2,12 +2,13 @@ package com.eigengo.lift.spark.jobs
 
 import com.typesafe.config.Config
 import org.apache.spark.{SparkConf, SparkContext}
+import akka.analytics.cassandra._
 
 import java.net._
 
 case class PrintCassandraEvents() extends Batch[Int, Unit] {
 
-  override def name: String = "PrintCassandra"
+  override def name: String = "PrintCassandraEvents"
 
   override def execute(master: String, config: Config, params: Int): Either[String, Unit] = {
 
@@ -16,21 +17,14 @@ case class PrintCassandraEvents() extends Batch[Int, Unit] {
 
     val sc = new SparkContext(new SparkConf()
       .setAppName(name)
-      .setMaster("local")
-      .set("spark.cassandra.connection.host", "127.0.0.1")
-      .set("spark.cassandra.journal.keyspace", "akka") // optional, defaults to "akka"
+      .setMaster(master)
+      .set("spark.cassandra.connection.host", config.getString("cassandra.host"))
+      .set("spark.cassandra.journal.keyspace", "akka")
       .set("spark.cassandra.journal.table", "messages")
       .set("spark.driver.host", InetAddress.getLocalHost.getHostAddress)
-      .set("spark.driver.port", "9001")) // optional, defaults to "messages"
+      .set("spark.driver.port", "9001"))
 
     sc.eventTable().cache().collect().foreach(println)
-
-    val sc = new SparkContext(new SparkConf()
-      .setAppName(name)
-
-      .setMaster(master))
-
-    sc.parallelize(1 to params).map(_ + 1).foreach(println)
 
     sc.stop()
 

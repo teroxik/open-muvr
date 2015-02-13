@@ -84,3 +84,16 @@ kafka:
 #    - zookeeper:zk
 #    - cassandra:journal.lift.eigengo.com
 #    - cassandra:snapshot.lift.eigengo.com
+sparksinglenode:
+  image: martinz/spark-master:latest
+  ports:
+    - "8080"
+    - "7077:7077"
+    - "8081:8081"
+    - "8888:8888"
+    - "4040:4040"
+    - "9001:9001"
+  links:
+    - zookeeper:zk
+    - cassandra:journal.lift.eigengo.com
+    - cassandra:snapshot.lift.eigengo.com
