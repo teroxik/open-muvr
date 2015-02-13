@@ -24,6 +24,6 @@ object Spark extends App with Logging {
 
     val manager = system.actorOf(JobManager.props(master, config))
 
-    manager ! BatchJobSubmit("PrintSequence")
+    manager ! BatchJobSubmit("PrintCassandraEvents")
   }
 }

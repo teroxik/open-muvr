@@ -35,7 +35,7 @@ class JobManager(
     case m: JobManagerProtocol => m match {
       case StreamJobSubmit(d) =>
         println(s"stream $d")
-      case BatchJobSubmit("PrintSequence") =>
+      case BatchJobSubmit("PrintCassandraEvents") =>
         submit(Job[PrintCassandraEvents], 10000)
       case x @ _ => log.warning(s"Not a job $x")
     }
