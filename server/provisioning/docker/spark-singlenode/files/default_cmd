@@ -25,7 +25,7 @@ echo "starting sshd"
 sleep 5
 
 echo "starting Spark Worker at $LOCAL_IP"
-${SPARK_HOME}/bin/spark-class org.apache.spark.deploy.worker.Worker spark://$LOCAL_IP:$LOCAL_PORT -h LOCAL_IP
+${SPARK_HOME}/bin/spark-class org.apache.spark.deploy.worker.Worker spark://$LOCAL_IP:$LOCAL_PORT -h $LOCAL_IP
 
 echo "starting Spark Master at spark://$LOCAL_IP:$LOCAL_PORT"
 ${SPARK_HOME}/sbin/start-master.sh
