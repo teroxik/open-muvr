@@ -4,7 +4,6 @@ import akka.actor.{ActorLogging, Props, Actor}
 import com.eigengo.lift.spark.JobManagerProtocol.{BatchJobSubmit, StreamJobSubmit, JobManagerProtocol}
 import com.eigengo.lift.spark.jobs.{Job, PrintCassandraEvents}
 import com.typesafe.config.Config
-import org.apache.log4j.Logger
 
 object JobManagerProtocol {
   sealed trait JobManagerProtocol
@@ -16,8 +15,6 @@ object JobManagerProtocol {
 }
 
 object JobManager {
-
-  val name = "spark"
 
   /**
    * Spark service props
