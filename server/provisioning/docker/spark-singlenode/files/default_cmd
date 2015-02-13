@@ -29,11 +29,13 @@ nohup ${SPARK_HOME}/sbin/start-master.sh &
 
 echo "starting Spark Worker at $LOCAL_IP"
 nohup ${SPARK_HOME}/bin/spark-class org.apache.spark.deploy.worker.Worker spark://$LOCAL_IP:$LOCAL_PORT -h $LOCAL_IP < /dev/null 2>&1 > /dev/null &
-
 echo "worker started"
+
+echo "starting driver"
+nohup java -jar /app/spark-assembly-1.0.0-SNAPSHOT.jar &
 
 while [ 1 ];
 do
 	tail -f /opt/spark-${SPARK_VERSION}/logs/*.out
-    sleep 1
+        sleep 1
 done

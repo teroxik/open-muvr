@@ -1,13 +1,6 @@
 package com.eigengo.lift.spark.jobs
 
-import com.typesafe.config.{ConfigFactory, Config}
-import org.apache.spark.SparkContext
-
-object Batch {
-  def apply[P, R](func: (SparkContext, P) => Either[String, R])(config: Config = ConfigFactory.empty()) = {
-    ???
-  }
-}
+import com.typesafe.config.Config
 
 trait Batch[P, R] extends App {
 

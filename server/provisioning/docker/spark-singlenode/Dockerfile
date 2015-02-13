@@ -9,5 +9,3 @@ ADD files /root/spark_singlenode_files
 
 RUN chown root.root /root/spark_singlenode_files/default_cmd
 RUN chmod 700 /root/spark_singlenode_files/default_cmd
-
-CMD ["/root/spark_singlenode_files/default_cmd"]
