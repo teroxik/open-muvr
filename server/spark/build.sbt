@@ -42,7 +42,7 @@ dockerfile in docker := {
   val artifact = (outputPath in assembly).value
   val artifactTargetPath = s"/app/${artifact.name}"
   new Dockerfile {
-    from("martinz/sparksinglenode")
+    from("martinz/spark-singlenode:latest")
     add(artifact, artifactTargetPath)
     entryPoint("java", "-jar", artifactTargetPath)
   }
