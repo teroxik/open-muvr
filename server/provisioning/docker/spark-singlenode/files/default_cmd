@@ -32,10 +32,8 @@ nohup ${SPARK_HOME}/bin/spark-class org.apache.spark.deploy.worker.Worker spark:
 
 echo "worker started"
 
-{
-    while [ 1 ]
-    do
-        tail -f /opt/spark-${SPARK_VERSION}/logs/*.out
-        sleep 1
-    done
-} &
+while [ 1 ];
+do
+	tail -f /opt/spark-${SPARK_VERSION}/logs/*.out
+    sleep 1
+done
