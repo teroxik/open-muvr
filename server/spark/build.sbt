@@ -44,7 +44,7 @@ dockerfile in docker := {
   new Dockerfile {
     from("martinz/spark-singlenode:latest")
     add(artifact, artifactTargetPath)
-    run("sh", "/root/spark_singlenode_files/default_cmd")
+    //run("sh", "/root/spark_singlenode_files/default_cmd")
     entryPoint("java", "-jar", artifactTargetPath)
   }
 }
