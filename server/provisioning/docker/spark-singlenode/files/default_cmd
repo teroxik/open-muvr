@@ -19,9 +19,7 @@ service hadoop-namenode start > /dev/null 2>&1
 service hadoop-datanode start
 
 echo "starting sshd"
-/usr/sbin/sshd
-
-sleep 5
+nohup /usr/sbin/sshd &
 
 echo "starting Spark Master at spark://$LOCAL_IP:$LOCAL_PORT"
 nohup ${SPARK_HOME}/sbin/start-master.sh &
