@@ -1,9 +1,10 @@
 #!/bin/bash
 
+IP=$(ip -o -4 addr list eth0 | perl -n -e 'if (m{inet\s([\d\.]+)\/\d+\s}xms) { print $1 }')
 LOCAL_IP=localhost
 LOCAL_PORT=7077
 
-echo "SPARK_SINGLE_NODE_IP=$LOCAL_IP"
+echo "SPARK_SINGLE_NODE_IP=$IP"
 
 echo "preparing Spark"
 # This is now unfortunately required, because shell needs to be executed in special scope to be able to update env vars
@@ -19,7 +20,9 @@ service hadoop-namenode start > /dev/null 2>&1
 service hadoop-datanode start
 
 echo "starting sshd"
-nohup /usr/sbin/sshd &
+/usr/sbin/sshd
+
+sleep 5
 
 echo "starting Spark Master at spark://$LOCAL_IP:$LOCAL_PORT"
 nohup ${SPARK_HOME}/sbin/start-master.sh &
@@ -28,8 +31,11 @@ echo "starting Spark Worker at $LOCAL_IP"
 nohup ${SPARK_HOME}/bin/spark-class org.apache.spark.deploy.worker.Worker spark://$LOCAL_IP:$LOCAL_PORT -h $LOCAL_IP < /dev/null 2>&1 > /dev/null &
 echo "worker started"
 
-#while [ 1 ];
-#do
-#	tail -f /opt/spark-${SPARK_VERSION}/logs/*.out
-#        sleep 1
-#done
+echo "starting driver from $1"
+nohup java -jar $1 &
+
+while [ 1 ];
+do
+	tail -f /opt/spark-${SPARK_VERSION}/logs/*.out
+        sleep 1
+done
