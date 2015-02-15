@@ -64,6 +64,17 @@ object Dependencies {
     val nak     = "org.scalanlp" %% "nak"            % "1.3" exclude("org.scalanlp", "breeze_2.11") exclude("org.scalanlp", "breeze-natives_2.11")
   }
 
+  object hadoop {
+    val version = "2.4.0"
+
+    val client = ("org.apache.hadoop" % "hadoop-client" % version)
+      .exclude("commons-beanutils", "commons-beanutils")
+      .exclude("commons-beanutils", "commons-beanutils-core")
+      .exclude("commons-logging", "commons-logging")
+      .exclude("org.slf4j", "slf4j-simple")
+      .exclude("org.slf4j", "slf4j-log4j12")
+  }
+
   object spark {
     val version = "1.2.0"
 
@@ -73,6 +84,7 @@ object Dependencies {
       .exclude("org.eclipse.jetty.orbit", "javax.mail")
       .exclude("org.eclipse.jetty.orbit", "javax.mail.glassfish")
       .exclude("org.eclipse.jetty.orbit", "javax.activation")
+      .exclude("commons-beanutils", "commons-beanutils")
       .exclude("commons-beanutils", "commons-beanutils-core")
       .exclude("commons-collections", "commons-collections")
       .exclude("commons-logging", "commons-logging")
@@ -84,6 +96,7 @@ object Dependencies {
     val streaming = "org.apache.spark" %% "spark-streaming" % version
     val streamingKafka = ("org.apache.spark" %% "spark-streaming-kafka" % version)
       .exclude("commons-beanutils", "commons-beanutils")
+      .exclude("commons-beanutils", "commons-beanutils-core")
       .exclude("commons-collections", "commons-collections")
       .exclude("com.esotericsoftware.minlog", "minlog")
   }

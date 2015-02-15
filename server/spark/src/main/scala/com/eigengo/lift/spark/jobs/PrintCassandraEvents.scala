@@ -15,16 +15,19 @@ case class PrintCassandraEvents() extends Batch[Int, Unit] {
     println("SPARK DRIVER HOST:")
     println(InetAddress.getLocalHost.getHostAddress)
 
+    config.entrySet().toArray.foreach(println)
+
     val sc = new SparkContext(new SparkConf()
       .setAppName(name)
-      .setMaster(master)
-      .set("spark.cassandra.connection.host", config.getString("cassandra.host"))
+      .setMaster("local[5]"))
+      /*.set("spark.cassandra.connection.host", config.getString("cassandra.host"))
       .set("spark.cassandra.journal.keyspace", "akka")
       .set("spark.cassandra.journal.table", "messages")
       .set("spark.driver.host", InetAddress.getLocalHost.getHostAddress)
-      .set("spark.driver.port", "9001"))
+      .set("spark.driver.port", "9001"))*/
 
-    sc.eventTable().cache().collect().foreach(println)
+    sc.parallelize(1 to 1000).map(_ + 1).foreach(println)
+    //sc.eventTable().cache().collect().foreach(println)
 
     sc.stop()
 

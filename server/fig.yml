@@ -85,7 +85,7 @@ kafka:
 #    - cassandra:journal.lift.eigengo.com
 #    - cassandra:snapshot.lift.eigengo.com
 sparksinglenode:
-  image: martinz/spark-singlenode:latest
+  image: janm399/lift:spark
   ports:
     - "8080"
     - "7077:7077"

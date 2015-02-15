@@ -1,10 +1,9 @@
 #!/bin/bash
 
-IP=$(ip -o -4 addr list eth0 | perl -n -e 'if (m{inet\s([\d\.]+)\/\d+\s}xms) { print $1 }')
 LOCAL_IP=localhost
 LOCAL_PORT=7077
 
-echo "SPARK_SINGLE_NODE_IP=$IP"
+echo "SPARK_SINGLE_NODE_IP=$LOCAL_IP"
 
 echo "preparing Spark"
 # This is now unfortunately required, because shell needs to be executed in special scope to be able to update env vars
