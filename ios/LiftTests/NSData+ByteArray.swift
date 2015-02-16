@@ -1,7 +1,7 @@
 import Foundation
 
 extension NSData {
- 
+    
     ///
     /// Views this NSData as array of bytes
     ///
@@ -10,5 +10,5 @@ extension NSData {
         getBytes(&buf, length: length)
         return buf
     }
-    
+
 }

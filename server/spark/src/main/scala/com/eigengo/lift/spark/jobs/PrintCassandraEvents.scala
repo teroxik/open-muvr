@@ -4,8 +4,6 @@ import com.typesafe.config.Config
 import org.apache.spark.{SparkConf, SparkContext}
 import akka.analytics.cassandra._
 
-import java.net._
-
 case class PrintCassandraEvents() extends Batch[Int, Unit] {
 
   override def name: String = "PrintCassandraEvents"
