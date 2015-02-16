@@ -12,23 +12,20 @@ case class PrintCassandraEvents() extends Batch[Int, Unit] {
 
   override def execute(master: String, config: Config, params: Int): Either[String, Unit] = {
 
-    println("SPARK DRIVER HOST:")
-    println(InetAddress.getLocalHost.getHostAddress)
-
-    config.entrySet().toArray.foreach(println)
-
     val sc = new SparkContext(new SparkConf()
       .setAppName(name)
-      .setMaster("local[5]"))
-      /*.set("spark.cassandra.connection.host", config.getString("cassandra.host"))
+      .setMaster(master)
+      .set("spark.cassandra.connection.host", config.getString("cassandra.host"))
       .set("spark.cassandra.journal.keyspace", "akka")
-      .set("spark.cassandra.journal.table", "messages")
-      .set("spark.driver.host", InetAddress.getLocalHost.getHostAddress)
-      .set("spark.driver.port", "9001"))*/
+      .set("spark.cassandra.journal.table", "messages"))
 
-    sc.parallelize(1 to 1000).map(_ + 1).foreach(println)
-    //sc.eventTable().cache().collect().foreach(println)
+      /*.set("spark.driver.host", InetAddress.getLocalHost.getHostAddress)
+      .set("spark.driver.port", "9001")*/
 
+    sc.addJar("/app/spark-assembly-1.0.0-SNAPSHOT.jar")
+
+    println("CASSANDRA EVENT TABLE: ")
+    sc.eventTable().cache().collect().foreach(println)
     sc.stop()
 
     Right((): Unit)

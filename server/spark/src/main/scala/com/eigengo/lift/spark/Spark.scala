@@ -5,6 +5,7 @@ import com.eigengo.lift.spark.JobManagerProtocol.BatchJobSubmit
 import com.typesafe.config.ConfigFactory
 import org.apache.log4j.{Logger, Level}
 import org.apache.spark.Logging
+import scala.concurrent.duration._
 
 object Spark extends App with Logging {
 
@@ -24,6 +25,6 @@ object Spark extends App with Logging {
 
     val manager = system.actorOf(JobManager.props(master, config))
 
-    manager ! BatchJobSubmit("PrintCassandraEvents")
+    system.scheduler.schedule(0 seconds, 30 seconds)(manager ! BatchJobSubmit("PrintCassandraEvents"))
   }
 }
