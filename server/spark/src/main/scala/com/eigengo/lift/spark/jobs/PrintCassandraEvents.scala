@@ -4,11 +4,16 @@ import com.typesafe.config.Config
 import org.apache.spark.{SparkConf, SparkContext}
 import akka.analytics.cassandra._
 
+import scala.util.{Success, Failure, Try}
+
 case class PrintCassandraEvents() extends Batch[Int, Unit] {
 
   override def name: String = "PrintCassandraEvents"
 
   override def execute(master: String, config: Config, params: Int): Either[String, Unit] = {
+
+    /*.set("spark.driver.host", InetAddress.getLocalHost.getHostAddress)
+      .set("spark.driver.port", "9001")*/
 
     val sc = new SparkContext(new SparkConf()
       .setAppName(name)
@@ -17,15 +22,18 @@ case class PrintCassandraEvents() extends Batch[Int, Unit] {
       .set("spark.cassandra.journal.keyspace", "akka")
       .set("spark.cassandra.journal.table", "messages"))
 
-      /*.set("spark.driver.host", InetAddress.getLocalHost.getHostAddress)
-      .set("spark.driver.port", "9001")*/
-
     sc.addJar("/app/spark-assembly-1.0.0-SNAPSHOT.jar")
 
-    println("CASSANDRA EVENT TABLE: ")
-    sc.eventTable().cache().collect().foreach(println)
+    val result = Try {
+      println("CASSANDRA EVENT TABLE: ")
+      sc.eventTable().cache().collect().foreach(println)
+    }
+
     sc.stop()
 
-    Right((): Unit)
+    result match {
+      case Success(_) => Right((): Unit)
+      case Failure(e) => Left(e.toString)
+    }
   }
 }
