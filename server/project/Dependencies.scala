@@ -64,6 +64,7 @@ object Dependencies {
     val nak     = "org.scalanlp" %% "nak"            % "1.3" exclude("org.scalanlp", "breeze_2.11") exclude("org.scalanlp", "breeze-natives_2.11")
   }
 
+  //TODO: Spark, Hadoop, Akkaanalytics are exclusive for currently used spark build and should be separated from the rest
   object hadoop {
     val version = "2.4.0"
 

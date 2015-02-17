@@ -24,6 +24,7 @@ libraryDependencies ++= Seq(
   akkaAnalytics.cassandra,
   spark.core,
   spark.mllib,
+  spray.client,
   hadoop.client
   //spark.streaming,
   //spark.streamingKafka
