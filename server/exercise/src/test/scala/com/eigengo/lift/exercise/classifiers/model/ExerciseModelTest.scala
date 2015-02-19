@@ -14,6 +14,7 @@ import com.eigengo.lift.exercise.classifiers.workflows.ClassificationAssertions
 import com.typesafe.config.ConfigFactory
 import java.text.SimpleDateFormat
 import org.scalacheck.Gen
+import org.scalacheck.Gen._
 import org.scalatest._
 import org.scalatest.prop._
 import scala.concurrent.{ExecutionContext, Future}
@@ -273,13 +274,14 @@ class ExerciseModelTest
     }
   }
 
-  property("[(tap@wrist >= 0.8) *] true") {
+  // After some empty or non-empty path, wrist is tapped with 80% probability
+  property("<true@wrist *> (tap@wrist >= 0.8)") {
     val watchQuery =
-      All(
+      Exists(
         Repeat(
-          AssertFact(Assert(Gesture("tap", 0.8), SensorDataSourceLocationWrist))
+          AssertFact(Assert(True, SensorDataSourceLocationWrist))
         ),
-        TT
+        Formula(Assert(Gesture("tap", 0.8), SensorDataSourceLocationWrist))
       )
 
     val sinkProbe = TestProbe()
@@ -289,10 +291,10 @@ class ExerciseModelTest
     val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
     implicit val cvc4 = new CVC4(system.settings.config)
     val model = TestActorRef(new ExerciseModel("test", sessionProps, Set(watchQuery)) with StandardEvaluation with ActorLogging {
-      // As we are testing evaluate, workflow is unused
-      val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(), Set(), Set(), Set(), Set(), snv))
+      // Simulate constantly detecting a tap event on the wrist
+      val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(Gesture("tap", 0.8)), Set(), Set(), Set(), Set(), snv))
       def makeDecision(query: Query, value: QueryValue, result: Boolean) = {
-        if (result) {
+        if (value.isInstanceOf[StableValue] && result) {
           Tap
         } else {
           NoExercise(metadata)
@@ -300,29 +302,30 @@ class ExerciseModelTest
       }
     })
 
-    forAll(BindToSensorsGen, BindToSensorsGen) { (event1: BindToSensors, event2: BindToSensors) =>
-      // Simulate a lookahead 2-element sliding window
-      val eventsWithLookahead = List(event1, event2)
+    forAll(listOfN(20, SensorNetValueGen)) { (events: List[SensorNetValue]) =>
+      whenever(events.nonEmpty) {
+        for (evt <- events) {
+          model ! evt
+        }
 
-      val evaluationFlow = model.underlyingActor.evaluate(watchQuery)
-      evaluationFlow.runWith(Source.single(eventsWithLookahead), Sink.foreach[ClassifiedExercise](sinkProbe.ref ! _))
-
-      assert(sinkProbe.receiveN(1).forall(_.isInstanceOf[Tap.type]))
+        assert(sinkProbe.receiveN(events.size).forall(_.isInstanceOf[Tap.type]))
+      }
     }
   }
 
-  property("[(tap@wrist >= 0.8; heartrate@chest >= 180) *] true") {
+  // After some non-empty path ending in a wrist tap (with 80% probability), heart rate (measured at the chest) is above 180
+  property("<(true@wrist)*; (tap@wrist >= 0.8)> (heartrate@chest >= 180)") {
     case class Heartrate(rate: Int) extends Fact
 
     val watchQuery =
-      All(
-        Repeat(
-          Sequence(
-            AssertFact(Assert(Gesture("tap", 0.8), SensorDataSourceLocationWrist)),
-            AssertFact(Assert(Heartrate(180), SensorDataSourceLocationChest))
-          )
+      Exists(
+        Sequence(
+          Repeat(
+            AssertFact(Assert(True, SensorDataSourceLocationWrist))
+          ),
+          AssertFact(Assert(Gesture("tap", 0.8), SensorDataSourceLocationWrist))
         ),
-        TT
+        Formula(Assert(Heartrate(180), SensorDataSourceLocationChest))
       )
 
     val sinkProbe = TestProbe()
@@ -333,8 +336,8 @@ class ExerciseModelTest
     implicit val cvc4 = new CVC4(system.settings.config)
     val model = TestActorRef(new ExerciseModel("test", sessionProps, Set(watchQuery)) with StandardEvaluation with ActorLogging {
       var tap: Boolean = true
-      // As we are testing evaluate, workflow is unused
-      val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(), Set(), Set(), Set(), Set(), snv))
+      // Simulate constantly detecting a wrist tap event and having a high heart rate
+      val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(Gesture("tap", 0.8)), Set(), Set(), Set(Heartrate(180)), Set(), snv))
       def makeDecision(query: Query, value: QueryValue, result: Boolean) = {
         if (result) {
           Tap
@@ -344,14 +347,14 @@ class ExerciseModelTest
       }
     })
 
-    forAll(BindToSensorsGen, BindToSensorsGen) { (event1: BindToSensors, event2: BindToSensors) =>
-      // Simulate a lookahead 2-element sliding window
-      val eventsWithLookahead = List(event1, event2)
+    forAll(listOfN(20, SensorNetValueGen)) { (events: List[SensorNetValue]) =>
+      whenever(events.nonEmpty) {
+        for (evt <- events) {
+          model ! evt
+        }
 
-      val evalutationFlow = model.underlyingActor.evaluate(watchQuery)
-      evalutationFlow.runWith(Source.single(eventsWithLookahead), Sink.foreach[ClassifiedExercise](sinkProbe.ref ! _))
-
-      assert(sinkProbe.receiveN(1).forall(_.isInstanceOf[Tap.type]))
+        assert(sinkProbe.receiveN(events.size).forall(_.isInstanceOf[Tap.type]))
+      }
     }
   }
 

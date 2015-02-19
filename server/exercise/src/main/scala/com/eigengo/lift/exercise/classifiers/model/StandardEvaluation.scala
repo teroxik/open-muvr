@@ -97,12 +97,15 @@ trait StandardEvaluation {
       results.fold(StableValue(result = false))(join)
 
     case Exists(AssertFact(fact), query1) if !lastState && evaluateAtSensor(fact, state) =>
+      // for some `AssertFact(fact)` step (whilst not in last trace step)
       UnstableValue(query1)
 
     case Exists(AssertFact(fact), query1) if lastState && evaluateAtSensor(fact, state) =>
+      // for some `AssertFact(fact)` step (whilst in last trace step)
       emptyEvaluate(query1)
 
     case Exists(AssertFact(_), _) =>
+      // No `AssertFact(_)` steps possible
       StableValue(result = false)
 
     case Exists(Test(query1), query2) =>
@@ -124,12 +127,15 @@ trait StandardEvaluation {
       )
 
     case All(AssertFact(fact), query1) if !lastState && evaluateAtSensor(fact, state) =>
+      // for all `AssertFact(fact)` steps (whilst not in last trace step)
       UnstableValue(query1)
 
     case All(AssertFact(fact), query1) if lastState && evaluateAtSensor(fact, state) =>
+      // for all `AssertFact(fact)` steps (whilst in last trace state)
       emptyEvaluate(query1)
 
     case All(AssertFact(_), _) =>
+      // No `AssertFact(_)` steps possible
       StableValue(result = true)
 
     case All(Test(query1), query2) =>
