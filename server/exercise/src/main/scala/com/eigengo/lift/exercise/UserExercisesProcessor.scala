@@ -2,10 +2,13 @@ package com.eigengo.lift.exercise
 
 import akka.actor._
 import akka.contrib.pattern.ShardRegion
+import akka.contrib.pattern.ShardRegion.Passivate
 import akka.persistence.{PersistentActor, SnapshotOffer}
 import com.eigengo.lift.common.{AutoPassivation, UserId}
 import java.io.FileOutputStream
 import com.eigengo.lift.exercise.classifiers.ExerciseModelChecking
+import com.eigengo.lift.notification.NotificationProtocol.DataMessagePayload
+import com.eigengo.lift.profile.UserProfileNotifications
 import scala.language.postfixOps
 import scalaz.\/
 
@@ -264,7 +267,8 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
   extends PersistentActor
   with ExerciseModelChecking
   with ActorLogging
-  with AutoPassivation {
+  with AutoPassivation
+  with UserProfileNotifications {
 
   import com.eigengo.lift.exercise.UserExercises._
   import com.eigengo.lift.exercise.UserExercisesClassifier._
@@ -277,11 +281,14 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
   // decoders
   private val rootSensorDataDecoder = RootSensorDataDecoder(AccelerometerDataDecoder, RotationDataDecoder)
 
+  // notification sender
+  private val notificationSender = newNotificationSender(userId, notification, userProfile)
+
   // tracing output
   /*private val tracing = */context.actorOf(UserExercisesTracing.props(userId))
 
   // how long until we stop processing
-  context.setReceiveTimeout(360.seconds)
+  context.setReceiveTimeout(120.seconds)
   // our unique persistenceId; the self.path.name is provided by ``UserExercises.idExtractor``,
   // hence, self.path.name is the String representation of the userId UUID.
   override val persistenceId: String = s"user-exercises-${userId.toString}"
@@ -318,84 +325,101 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
       sender() ! \/.left(s"Unexpected in replaying $x")
   }
 
-  private def exercising(id: SessionId, sessionProps: SessionProperties): Receive = withPassivation {
-    // start and end
-    case ExerciseSessionStart(newSessionProps) ⇒
-      val newId = SessionId.randomId()
-      persist(Seq(SessionEndedEvt(id), SessionStartedEvt(newId, newSessionProps))) { case (_::newSession::Nil) ⇒
-        log.warning("ExerciseSessionStart: exercising -> exercising. Implicitly ending running session and starting a new one.")
+  private def exercising(id: SessionId, sessionProps: SessionProperties): Receive = {
 
-        saveSnapshot(newSession)
-        sender() ! \/.right(newId)
-        registerModelChecking(newSessionProps)
-        context.become(exercising(newId, newSessionProps))
-      }
-
-    case ExerciseSessionEnd(`id`) ⇒
-      log.info("ExerciseSessionEnd: exercising -> not exercising.")
-      persist(SessionEndedEvt(id)) { evt ⇒
-        saveSnapshot(evt)
-        unregisterModelChecking()
-        context.become(notExercising)
-        sender() ! \/.right(())
-      }
-
-    case ExerciseSessionAbandon(`id`) ⇒
-      log.info("ExerciseSessionEnd: exercising -> not exercising.")
+    def abandon(): Unit = {
+      log.info("ExerciseSessionAbandon: exercising -> not exercising.")
       persist(SessionAbandonedEvt(id)) { evt ⇒
         saveSnapshot(evt)
         unregisterModelChecking()
+      }
+
+      notificationSender ! DataMessagePayload(""" {"type":"offline-management", "replay":true} """)
+    }
+
+    {
+      case ReceiveTimeout ⇒
+        log.debug("ReceiveTimeout: passivating.")
+        abandon()
+        context.parent ! Passivate(stopMessage = 'stop)
+      case 'stop ⇒
+        log.debug("'stop: bye-bye, cruel world, see you after recovery.")
+        context.stop(self)
+
+      // start and end
+      case ExerciseSessionStart(newSessionProps) ⇒
+        val newId = SessionId.randomId()
+        persist(Seq(SessionEndedEvt(id), SessionStartedEvt(newId, newSessionProps))) { case (_::newSession::Nil) ⇒
+          log.warning("ExerciseSessionStart: exercising -> exercising. Implicitly ending running session and starting a new one.")
+
+          saveSnapshot(newSession)
+          sender() ! \/.right(newId)
+          registerModelChecking(newSessionProps)
+          context.become(exercising(newId, newSessionProps))
+        }
+
+      case ExerciseSessionEnd(`id`) ⇒
+        log.info("ExerciseSessionEnd: exercising -> not exercising.")
+        persist(SessionEndedEvt(id)) { evt ⇒
+          saveSnapshot(evt)
+          unregisterModelChecking()
+          context.become(notExercising)
+          sender() ! \/.right(())
+        }
+
+      case ExerciseSessionAbandon(`id`) ⇒
+        abandon()
         context.become(notExercising)
         sender() ! \/.right(())
-      }
 
-    // packet from the mobile / wearables
-    case ExerciseDataProcessMultiPacket(`id`, packet) ⇒
-      log.info("ExerciseDataProcess: exercising -> exercising.")
+      // packet from the mobile / wearables
+      case ExerciseDataProcessMultiPacket(`id`, packet) ⇒
+        log.info("ExerciseDataProcess: exercising -> exercising.")
 
-      if (classifier.isEmpty) {
-        sender() ! \/.left("Attempted to classify multi-packet exercising data when no classifier was defined!")
-      } else {
-        val (h::t) = packet.packets.map { pwl ⇒
-          rootSensorDataDecoder
-            .decodeAll(pwl.payload)
-            .map(sd ⇒ SensorDataWithLocation(pwl.sourceLocation, sd))
+        if (classifier.isEmpty) {
+          sender() ! \/.left("Attempted to classify multi-packet exercising data when no classifier was defined!")
+        } else {
+          val (h::t) = packet.packets.map { pwl ⇒
+            rootSensorDataDecoder
+              .decodeAll(pwl.payload)
+              .map(sd ⇒ SensorDataWithLocation(pwl.sourceLocation, sd))
+          }
+          val result = t.foldLeft(h.map(x ⇒ List(x)))((r, b) ⇒ r.flatMap(sdwls ⇒ b.map(x ⇒ x :: sdwls)))
+          result.fold({ err ⇒ persist(MultiPacketDecodingFailedEvt(id, err, packet)) { evt ⇒ sender() ! \/.left(err) } },
+                      { dec ⇒ persist(ClassifyExerciseEvt(sessionProps, dec)) { evt ⇒ classifier.foreach(ref => { ref ! evt; sender() ! \/.right(()) }) } })
         }
-        val result = t.foldLeft(h.map(x ⇒ List(x)))((r, b) ⇒ r.flatMap(sdwls ⇒ b.map(x ⇒ x :: sdwls)))
-        result.fold({ err ⇒ persist(MultiPacketDecodingFailedEvt(id, err, packet)) { evt ⇒ sender() ! \/.left(err) } },
-                    { dec ⇒ persist(ClassifyExerciseEvt(sessionProps, dec)) { evt ⇒ classifier.foreach(ref => { ref ! evt; sender() ! \/.right(()) }) } })
-      }
 
-    // explicit classification
-    case ExerciseExplicitClassificationStart(`id`, exercise) =>
-      persist(ExerciseEvt(id, ModelMetadata.user, exercise)) { evt ⇒ }
+      // explicit classification
+      case ExerciseExplicitClassificationStart(`id`, exercise) =>
+        persist(ExerciseEvt(id, ModelMetadata.user, exercise)) { evt ⇒ }
 
-    case ExerciseExplicitClassificationEnd(`id`) ⇒
-      self ! NoExercise(ModelMetadata.user)
+      case ExerciseExplicitClassificationEnd(`id`) ⇒
+        self ! NoExercise(ModelMetadata.user)
 
-    case ExerciseExplicitClassificationExamples(`id`) ⇒
-      classifier.foreach(_.tell(ClassificationExamples(sessionProps), sender()))
+      case ExerciseExplicitClassificationExamples(`id`) ⇒
+        classifier.foreach(_.tell(ClassificationExamples(sessionProps), sender()))
 
-    // explicit metrics
-    case ExerciseSetExerciseMetric(`id`, metric) ⇒
-      persist(ExerciseSetExerciseMetricEvt(id, metric)) { evt ⇒ }
+      // explicit metrics
+      case ExerciseSetExerciseMetric(`id`, metric) ⇒
+        persist(ExerciseSetExerciseMetricEvt(id, metric)) { evt ⇒ }
 
-    // classification results
-    case FullyClassifiedExercise(metadata, confidence, exercise) ⇒
-      log.info("FullyClassifiedExercise: exercising -> exercising.")
-      persist(ExerciseEvt(id, metadata, exercise)) { evt ⇒ }
+      // classification results
+      case FullyClassifiedExercise(metadata, confidence, exercise) ⇒
+        log.info("FullyClassifiedExercise: exercising -> exercising.")
+        persist(ExerciseEvt(id, metadata, exercise)) { evt ⇒ }
 
-    case Tap ⇒
-      persist(ExerciseSetExplicitMarkEvt(id)) { evt ⇒ }
+      case Tap ⇒
+        persist(ExerciseSetExplicitMarkEvt(id)) { evt ⇒ }
 
-    case UnclassifiedExercise(_) ⇒
+      case UnclassifiedExercise(_) ⇒
 
-    case NoExercise(metadata) ⇒
-      persist(NoExerciseEvt(id, metadata)) { evt ⇒ }
+      case NoExercise(metadata) ⇒
+        persist(NoExerciseEvt(id, metadata)) { evt ⇒ }
 
-    case x ⇒
-      log.warning(s"Unexpected $x in exercising")
-      sender() ! \/.left(s"Unexpected in exercising $x")
+      case x ⇒
+        log.warning(s"Unexpected $x in exercising")
+        sender() ! \/.left(s"Unexpected in exercising $x")
+    }
   }
 
   private def notExercising: Receive = withPassivation {
