@@ -14,7 +14,6 @@ import com.eigengo.lift.exercise.classifiers.workflows.ClassificationAssertions
 import com.typesafe.config.ConfigFactory
 import java.text.SimpleDateFormat
 import org.scalacheck.Gen
-import org.scalacheck.Gen._
 import org.scalatest._
 import org.scalatest.prop._
 import scala.concurrent.{ExecutionContext, Future}
@@ -282,7 +281,6 @@ class ExerciseModelTest
         ),
         TT
       )
-    val eventTraceSize = 10
 
     val sinkProbe = TestProbe()
     val metadata = ModelMetadata(42)
@@ -291,8 +289,8 @@ class ExerciseModelTest
     val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
     implicit val cvc4 = new CVC4(system.settings.config)
     val model = TestActorRef(new ExerciseModel("test", sessionProps, Set(watchQuery)) with StandardEvaluation with ActorLogging {
-      // Simulate a constant wrist classifier
-      val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(Gesture("tap", 0.80)), Set(), Set(), Set(), Set(), snv))
+      // As we are testing evaluate, workflow is unused
+      val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(), Set(), Set(), Set(), Set(), snv))
       def makeDecision(query: Query, value: QueryValue, result: Boolean) = {
         if (result) {
           Tap
@@ -302,17 +300,14 @@ class ExerciseModelTest
       }
     })
 
-    forAll(listOfN(eventTraceSize, BindToSensorsGen)) { (events: List[BindToSensors]) =>
-      // Protects against the effects of shrinking (during test failure)
-      whenever(events.nonEmpty) {
-        // Simulate a lookahead 2-element sliding window
-        val eventsWithLookahead = events.dropRight(1).zip(events.tail).map(p => List(p._1, p._2)) :+ List(events.last)
+    forAll(BindToSensorsGen, BindToSensorsGen) { (event1: BindToSensors, event2: BindToSensors) =>
+      // Simulate a lookahead 2-element sliding window
+      val eventsWithLookahead = List(event1, event2)
 
-        val evaluationFlow = model.underlyingActor.evaluate(watchQuery)
-        evaluationFlow.runWith(Source(eventsWithLookahead), Sink.foreach[ClassifiedExercise](sinkProbe.ref ! _))
+      val evaluationFlow = model.underlyingActor.evaluate(watchQuery)
+      evaluationFlow.runWith(Source.single(eventsWithLookahead), Sink.foreach[ClassifiedExercise](sinkProbe.ref ! _))
 
-        assert(sinkProbe.receiveN(events.size).forall(_.isInstanceOf[Tap.type]))
-      }
+      assert(sinkProbe.receiveN(1).forall(_.isInstanceOf[Tap.type]))
     }
   }
 
@@ -329,10 +324,8 @@ class ExerciseModelTest
         ),
         TT
       )
-    val eventTraceSize = 20
 
     val sinkProbe = TestProbe()
-    val evaluationProbe = TestProbe()
     val metadata = ModelMetadata(42)
     val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
     val startDate = dateFormat.parse("1970-01-01")
@@ -340,16 +333,8 @@ class ExerciseModelTest
     implicit val cvc4 = new CVC4(system.settings.config)
     val model = TestActorRef(new ExerciseModel("test", sessionProps, Set(watchQuery)) with StandardEvaluation with ActorLogging {
       var tap: Boolean = true
-      // Simulate an alternating wrist/chest classifier
-      val workflow = Flow[SensorNetValue].map {
-        case snv if tap =>
-          tap = !tap
-          new BindToSensors(Set(Gesture("tap", 0.80)), Set(), Set(), Set(), Set(), snv)
-
-        case snv =>
-          tap = !tap
-          new BindToSensors(Set(), Set(), Set(), Set(Heartrate(180)), Set(), snv)
-      }
+      // As we are testing evaluate, workflow is unused
+      val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(), Set(), Set(), Set(), Set(), snv))
       def makeDecision(query: Query, value: QueryValue, result: Boolean) = {
         if (result) {
           Tap
@@ -359,17 +344,14 @@ class ExerciseModelTest
       }
     })
 
-    forAll(listOfN(eventTraceSize, BindToSensorsGen)) { (events: List[BindToSensors]) =>
-      // Protects against the effects of shrinking (during test failure)
-      whenever(events.nonEmpty) {
-        // Simulate a lookahead 2-element sliding window
-        val eventsWithLookahead = events.dropRight(1).zip(events.tail).map(p => List(p._1, p._2)) :+ List(events.last)
+    forAll(BindToSensorsGen, BindToSensorsGen) { (event1: BindToSensors, event2: BindToSensors) =>
+      // Simulate a lookahead 2-element sliding window
+      val eventsWithLookahead = List(event1, event2)
 
-        val evalutationFlow = model.underlyingActor.evaluate(watchQuery)
-        evalutationFlow.runWith(Source(eventsWithLookahead), Sink.foreach[ClassifiedExercise](sinkProbe.ref ! _))
+      val evalutationFlow = model.underlyingActor.evaluate(watchQuery)
+      evalutationFlow.runWith(Source.single(eventsWithLookahead), Sink.foreach[ClassifiedExercise](sinkProbe.ref ! _))
 
-        assert(sinkProbe.receiveN(events.size).forall(_.isInstanceOf[Tap.type]))
-      }
+      assert(sinkProbe.receiveN(1).forall(_.isInstanceOf[Tap.type]))
     }
   }
 
