@@ -67,7 +67,7 @@ sparksinglenode:
     - "8888:8888"
     - "4040:4040"
     - "9001:9001"
-  links:
-    - zookeeper:zk
-    - cassandra:journal.lift.eigengo.com
-    - cassandra:snapshot.lift.eigengo.com
+  environment:
+    SPARK_MASTER_HOST: 192.168.59.103
+    SPARK_MASTER_PORT: 7077
+    CASSANDRA_HOST: 192.168.59.103

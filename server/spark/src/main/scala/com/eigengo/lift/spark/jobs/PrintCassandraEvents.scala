@@ -1,19 +1,40 @@
 package com.eigengo.lift.spark.jobs
 
+import akka.actor.ActorSystem
 import com.typesafe.config.Config
 import org.apache.spark.{SparkConf, SparkContext}
 import akka.analytics.cassandra._
+import spray.http.{Uri, HttpResponse, HttpRequest}
+import spray.client.pipelining._
 
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 import scala.util.{Success, Failure, Try}
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class PrintCassandraEvents() extends Batch[Int, Unit] {
 
   override def name: String = "PrintCassandraEvents"
 
+  implicit def actorSystem = ActorSystem("Cassandra")
+
+  def pipeline: HttpRequest => Future[HttpResponse] = sendReceive
+
   override def execute(master: String, config: Config, params: Int): Either[String, Unit] = {
 
     /*.set("spark.driver.host", InetAddress.getLocalHost.getHostAddress)
       .set("spark.driver.port", "9001")*/
+
+    val restApi = Uri(s"http://${config.getString("app.rest.api")}/exercise/musclegroups").withPort(config.getInt("app.rest.port"))
+
+    println("API URI")
+    println(restApi)
+
+    val goog = Await.result(pipeline(Get(restApi)), Duration("10 second"))
+
+    println("API RESPONSE")
+    println(goog)
 
     val sc = new SparkContext(new SparkConf()
       .setAppName(name)
