@@ -15,26 +15,32 @@ trait Driver {
 
   private val logger = Logger.getLogger(classOf[Driver])
 
-  def submit[P, R](job: Batch[P, R], jobParam: P): Either[String, R] = {
-
-    logger.info(s"Executing job ${job.name} on master $master")
-    val result = job.execute(master, config, jobParam)
-    logger.info(s"Job ${job.name} finished with result $result")
-
-    result
-  }
-
-  def submit[R](name: String, job: SparkContext => Either[String, R], additionalConfig: Map[String, String] = Map()) = {
+  private def sparkContext(name: String, additionalConfig: (Config, SparkConf) => SparkConf) = {
     val conf = new SparkConf()
       .setAppName(name)
       .setMaster(master)
 
-    additionalConfig.foreach(x => conf.set(x._1, x._2))
+    val sc = new SparkContext(additionalConfig(config, conf))
+    sc.addJar("/app/spark-assembly-1.0.0-SNAPSHOT.jar")
+    sc
+  }
 
-    val sc = new SparkContext(conf)
+  def submit[P, R](job: Batch[P, R], jobParam: P): Either[String, R] = {
+    val sc = sparkContext(job.name, job.additionalConfig)
+
+    logger.info(s"Executing job ${job.name} on master $master")
+    val result = job.execute(sc, config, jobParam)
+    logger.info(s"Job ${job.name} finished with result $result")
+
+    sc.stop()
+    result
+  }
+
+  def submit[R](name: String, job: SparkContext => Either[String, R], additionalConfig: (Config, SparkConf) => SparkConf = (x, y) => y) = {
+    val sc = sparkContext(name, additionalConfig)
 
     logger.info(s"Executing job ${name} on master $master")
-    val result = job(sc)
+    val result = job(sparkContext(name, additionalConfig))
     logger.info(s"Job ${name} finished with result $result")
 
     sc.stop()

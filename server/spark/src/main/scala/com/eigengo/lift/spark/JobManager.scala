@@ -38,13 +38,15 @@ class JobManager(
       case BatchJobSubmitFunction(name, func) =>
         submit(name, func)
       case BatchJobSubmit("PrintCassandraEvents") =>
-        val result = submit(Job[PrintCassandraEvents], 10000)
+        val result = submit(PrintCassandraEvents(), 10000)
         log.info(s"Job PrintCassandraEvents resulted in $result")
       case BatchJobSubmit("SimplePrintJob") =>
-        submit[String]("SimplePrintJob", (sc: SparkContext) => {
+        val result = submit[String]("SimplePrintJob", (sc: SparkContext) => {
           sc.parallelize(0 to 100).foreach(println)
           Right("")
         })
+        log.info(s"Job PrintCassandraEvents resulted in $result")
+
       case x @ _ => log.warning(s"Not a job $x")
     }
 

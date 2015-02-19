@@ -15,4 +15,4 @@ docker run --name main2 --net="host" -e "HOST=$HOST_IP" -e "APP_PORT=2552" -e "R
 docker run --name main3 --net="host" -e "HOST=$HOST_IP" -e "APP_PORT=2553" -e "REST_PORT=8084" -e "SEED_NODES=akka.tcp://Lift@$HOST_IP:2551" -e "APP_ADDR" -e "JOURNAL=$HOST_IP" -e "SNAPSHOT=$HOST_IP" -p "2553:2553" -p "8084" janm399/lift:main-production &
 
 echo "Starting spark monolith 1 node"
-docker run --name spark --net="host" -e "CASSANDRA_HOST=$HOST_IP" -e "APP_REST_API=$HOST_IP" -e "APP_REST_PORT=8083" -e "SPARK_MASTER_HOST=$HOST_IP" -e "SPARK_MASTER_PORT=7077" -p "8080" -p "7077:7077" -p "8081:8081" -p "8888:8888" -p "4040:4040" -p "9001:9001" janm399/lift:spark &
+docker run --name spark --net="host" --add-host localhost:127.0.0.1 --add-host $HOST_IP:$HOST_IP -e "CASSANDRA_HOST=$HOST_IP" -e "APP_REST_API=$HOST_IP" -e "APP_REST_PORT=8083" -e "SPARK_MASTER_HOST=localhost" -e "SPARK_MASTER_PORT=7077" -p "8080" -p "7077:7077" -p "8081:8081" -p "8888:8888" -p "4040:4040" -p "9001:9001" janm399/lift:spark &
