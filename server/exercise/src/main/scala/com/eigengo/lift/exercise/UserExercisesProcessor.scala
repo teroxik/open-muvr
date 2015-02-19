@@ -328,24 +328,23 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
   private def exercising(id: SessionId, sessionProps: SessionProperties): Receive = {
 
     def abandon(): Unit = {
-      log.info("ExerciseSessionEnd: exercising -> not exercising.")
+      log.info("ExerciseSessionAbandon: exercising -> not exercising.")
       persist(SessionAbandonedEvt(id)) { evt ⇒
         saveSnapshot(evt)
         unregisterModelChecking()
         context.become(notExercising)
-        sender() ! \/.right(())
       }
 
-      notificationSender ! DataMessagePayload("""{ "type":"offline-management", "replay":true }""")
+      notificationSender ! DataMessagePayload(Map("type" → "offline-management", "replay" → true))
     }
 
     {
       case ReceiveTimeout ⇒
         log.debug("ReceiveTimeout: passivating.")
-        abandon()
         context.parent ! Passivate(stopMessage = 'stop)
       case 'stop ⇒
         log.debug("'stop: bye-bye, cruel world, see you after recovery.")
+        abandon()
         context.stop(self)
 
       // start and end
@@ -369,7 +368,9 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
           sender() ! \/.right(())
         }
 
-      case ExerciseSessionAbandon(`id`) ⇒ abandon()
+      case ExerciseSessionAbandon(`id`) ⇒
+        abandon()
+        sender() ! \/.right(())
 
       // packet from the mobile / wearables
       case ExerciseDataProcessMultiPacket(`id`, packet) ⇒
