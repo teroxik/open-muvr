@@ -2,88 +2,62 @@ cassandra:
   image: spotify/cassandra
   expose:
     - "7199"
-    - "7000" 
-    - "7001" 
-    - "9160" 
-    - "9042" 
-    - "22" 
-    - "8012" 
+    - "7000"
+    - "7001"
+    - "9160"
+    - "9042"
+    - "22"
+    - "8012"
     - "61621"
-etcd:
-  image: coreos/etcd
-  expose:
-    - "4001"
-  ports:
-    - "7001:7001"
-    - "4001:4001"
+  net: "host"
 main:
-  image: janm399/lift:main
+  image: janm399/lift:main-production
   environment:
+    HOST: 192.168.59.103
+    APP_PORT: 2551
+    SEED_NODES: akka.tcp://Lift@192.168.59.103:2551
+    REST_PORT: 8080
     APP_ADDR:
-    JOURNAL: journal.lift.eigengo.com
-    SNAPSHOT: snapshot.lift.eigengo.com
-    ETCD_URL: http://etcd.lift.eigengo.com:4001
-    KAFKA_BROKER_LIST: 192.168.59.103:9092
+    JOURNAL: 192.168.59.103
+    SNAPSHOT: 192.168.59.103
   ports:
-    - "2552"
+    - "2551:2551"
     - "8080"
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock
-  links:
-    - cassandra:journal.lift.eigengo.com
-    - cassandra:snapshot.lift.eigengo.com
-    - etcd:etcd.lift.eigengo.com
-    - zookeeper:zk
-adapter:
-  image: janm399/lift:adapter
+  net: "host"
+maintwo:
+  image: janm399/lift:main-production
   environment:
-    ETCD_URL: http://etcd.lift.eigengo.com:4001
+    HOST: 192.168.59.103
+    APP_PORT: 2552
+    SEED_NODES: akka.tcp://Lift@192.168.59.103:2551
+    REST_PORT: 8080
+    APP_ADDR:
+    JOURNAL: 192.168.59.103
+    SNAPSHOT: 192.168.59.103
   ports:
-    - "2552"
-  ports:
-    - "8080:8080"
+    - "2552:2552"
+    - "8080"
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock
-  links:
-    - cassandra:journal.lift.eigengo.com
-    - cassandra:snapshot.lift.eigengo.com
-    - etcd:etcd.lift.eigengo.com
-zookeeper:
-  image: wurstmeister/zookeeper
-  ports:
-    - "2181:2181"
-kafka:
-  image: wurstmeister/kafka:0.8.1.1-1
-  ports:
-    - "9092:9092"
-  links:
-    - zookeeper:zk
+  net: "host"
+mainthree:
+  image: janm399/lift:main-production
   environment:
-    KAFKA_ADVERTISED_HOST_NAME: 192.168.59.103
+    HOST: 192.168.59.103
+    APP_PORT: 2553
+    SEED_NODES: akka.tcp://Lift@192.168.59.103:2551
+    REST_PORT: 8080
+    APP_ADDR:
+    JOURNAL: 192.168.59.103
+    SNAPSHOT: 192.168.59.103
+  ports:
+    - "2553:2553"
+    - "8080"
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock
-#sparkmaster:
-#  image: martinz/spark-master:latest
-#  ports:
-#    - "8080"
-#    - "7077:7077"
-#sparkworker:
-#  image: martinz/spark-worker:latest
-#  ports:
-#    - "8081:8081"
-#    - "8888:8888"
-#  links:
-#    - sparkmaster
-#sparkdriver:
-#  image: janm399/lift:spark
-#  ports:
-#    - "4040:4040"
-#    - "9001:9001"
-#  links:
-#    - sparkmaster
-#    - zookeeper:zk
-#    - cassandra:journal.lift.eigengo.com
-#    - cassandra:snapshot.lift.eigengo.com
+  net: "host"
 sparksinglenode:
   image: janm399/lift:spark
   ports:

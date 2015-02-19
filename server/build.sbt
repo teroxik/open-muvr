@@ -3,38 +3,46 @@ import Keys._
 
 name := "domain"
 
-//Common code, but not protocols
-lazy val common = project.in(file("common")).dependsOn(contrib)
+// Configuration information used to classify tests based on the time they take to run
+lazy val LongRunningTest = config("long") extend Test
+lazy val ShortRunningTest = config("short") extend Test
 
-//Kafka integration
-lazy val kafkaUtil = project.in(file("kafka-util"))
-lazy val kafka = project.in(file("kafka")).dependsOn(common, kafkaUtil)
+// List of tests that require extra running time (used by CI to stage testing runs)
+val longRunningTests = Seq(
+  "com.eigengo.lift.exercise.classifiers.model.ExerciseModelTest",
+  "com.eigengo.lift.exercise.classifiers.model.provers.CVC4Test"
+)
 
-//Spark
+// Common code, but not protocols
+lazy val common = project.in(file("common"))
+
+// Spark
 lazy val spark = project.in(file("spark"))
 
-//Exercise
-lazy val exercise = project.in(file("exercise")).dependsOn(notificationProtocol, profileProtocol, common, kafka)
+// Exercise
+lazy val exercise = project.in(file("exercise"))
+  .dependsOn(notificationProtocol, profileProtocol, common)
+  .configs(LongRunningTest, ShortRunningTest)
+  .settings(inConfig(LongRunningTest)(Defaults.testTasks): _*)
+  .settings(inConfig(ShortRunningTest)(Defaults.testTasks): _*)
+  .settings(
+    testOptions in LongRunningTest := Seq(Tests.Filter(longRunningTests.contains)),
+    testOptions in ShortRunningTest := Seq(Tests.Filter((name: String) => !longRunningTests.contains(name)))
+  )
 
-//User profiles
+// User profiles
 lazy val profile = project.in(file("profile")).dependsOn(profileProtocol, common)
 lazy val profileProtocol = project.in(file("profile-protocol")).dependsOn(common, notificationProtocol)
 
-//Notifications
+// Notifications
 lazy val notification = project.in(file("notification")).dependsOn(common, notificationProtocol)
 lazy val notificationProtocol = project.in(file("notification-protocol")).dependsOn(common)
 
-//Main
-lazy val main = project.in(file("main")).dependsOn(exercise, profile, notification, common, kafka)
+// Main
+lazy val main = project.in(file("main")).dependsOn(exercise, profile, notification, common)
 
-//The unified API adapter
-lazy val adapter = project.in(file("adapter")).dependsOn(common)
-
-//The cluster config
-lazy val contrib = project.in(file("contrib"))
-
-//The main aggregate
-lazy val root = (project in file(".")).aggregate(main, exercise, profile, notification, common, adapter, kafka, spark, kafkaUtil)
+// The main aggregate
+lazy val root = (project in file(".")).aggregate(main, exercise, profile, notification, common, spark)
 
 fork in Test := false
 
