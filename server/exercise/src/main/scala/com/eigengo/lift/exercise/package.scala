@@ -128,5 +128,5 @@ package object exercise {
    * Wraps the list of Suggestions
    * @param suggestions the suggestions
    */
-  case class Suggestions(suggestions: List[Suggestion]) extends AnyVal
+  case class Suggestions(suggestions: List[Suggestion])
 }

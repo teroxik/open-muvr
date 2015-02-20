@@ -9,8 +9,7 @@ import com.eigengo.lift.exercise.UserExercisesClassifier.MuscleGroup
 import com.eigengo.lift.exercise.UserExercisesProcessor._
 import com.eigengo.lift.exercise.UserExercisesSessions._
 import org.scalatest.{FlatSpec, Matchers}
-import scodec.bits.BitVector
-import spray.http.HttpEntity
+import spray.http.{HttpRequest, ContentTypes, HttpEntity}
 import spray.testkit.ScalatestRouteTest
 
 import scalaz._
@@ -22,12 +21,6 @@ object ExerciseServiceTest {
 
     val userId = UserId.randomId()
     val sessionId = SessionId.randomId()
-
-    val suggestions = Suggestions(
-      Suggestion.Session(dateFormat.parse("2015-02-20"), SuggestionSource.History, Seq("arms"), 1.0) ::
-      Suggestion.Rest(dateFormat.parse("2015-02-21"), SuggestionSource.History) ::
-      Suggestion.Session(dateFormat.parse("2015-02-20"), SuggestionSource.History, Seq("legs"), 1.0) :: Nil
-    )
 
     val squat = Exercise("squat", Some(1.0), None)
     val intensity = Some(1.0)
@@ -71,6 +64,9 @@ object ExerciseServiceTest {
             TestActor.KeepRunning
           case UserExerciseExplicitClassificationStart(_, _, _) =>
             sender ! List(TestData.squat)
+            TestActor.KeepRunning
+          case UserExerciseSetSuggestions(_, _) ⇒
+            sender ! \/.right(())
             TestActor.KeepRunning
         }
       }
@@ -156,11 +152,36 @@ class ExerciseServiceTest
   }
 
   it should "listen at POST exercise/:UserIdValue/classificaion endpoint" in {
-    Post(s"/exercise/${TestData.userId.id}/classification", TestData.suggestions) ~> underTest ~> check {
+    val suggestionsEntity = HttpEntity(ContentTypes.`application/json`,
+      """
+        |[
+        |   { "date":"2015-02-20",
+        |     "source":"history",
+        |     "muscleGroupKeys": ["arms"],
+        |     "intensity": 1.0
+        |   },
+        |   { "date":"2015-02-21",
+        |     "source":"programme"
+        |   },
+        |   { "date":"2015-02-22",
+        |     "source": { "notes":"Chop, chop" },
+        |     "muscleGroupKeys": ["legs"],
+        |     "intensity":0.8
+        |   }
+        |]
+      """.stripMargin)
+
+    val suggestions = Suggestions(
+      Suggestion.Session(dateFormat.parse("2015-02-20"), SuggestionSource.History, List("arms"), 1.0) ::
+      Suggestion.Rest(dateFormat.parse("2015-02-21"), SuggestionSource.Programme) ::
+      Suggestion.Session(dateFormat.parse("2015-02-22"), SuggestionSource.Trainer("Chop, chop"), List("legs"), 0.8) :: Nil
+    )
+
+    Post(s"/exercise/${TestData.userId.id}/classification").withEntity(suggestionsEntity) ~> underTest ~> check {
       response.entity.asString should be(TestData.emptyResponse)
     }
 
-    probe.expectMsg(UserExerciseSetSuggestions(TestData.userId, TestData.suggestions))
+    probe.expectMsg(UserExerciseSetSuggestions(TestData.userId, suggestions))
   }
 
   it should "listen at POST exercise/:UserIdValue/:SessionIdValue/end endpoint" in {
