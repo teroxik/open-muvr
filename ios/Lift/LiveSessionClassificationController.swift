@@ -6,7 +6,7 @@ import Foundation
 ///
 protocol LiveSessionClassificationTagDelegate {
     
-    func doneTagging(intensity: Exercise.ExerciseIntensityKey, repetition: Int)
+    func doneTagging(exercise: Exercise.Exercise, intensity: Exercise.ExerciseIntensityKey, repetition: Int)
     
 }
 
@@ -17,10 +17,10 @@ class LiveSessionTagView : UIView {
     
     /// default values
     struct Defaults {
-        static let repetitions: [Int] = [10, 2, 5, 8]
+        static let repetitions: [Int] = [2, 5, 8, 10]
         static let intensities: [Exercise.ExerciseIntensityKey] = [
-            Exercise.ExerciseIntensity.moderate,
             Exercise.ExerciseIntensity.light,
+            Exercise.ExerciseIntensity.moderate,
             Exercise.ExerciseIntensity.hard,
             Exercise.ExerciseIntensity.brutal
             ].map { $0.intensity }
@@ -104,7 +104,7 @@ class LiveSessionTagView : UIView {
     
     @IBAction
     func done(sender: UIButton) {
-        delegate?.doneTagging(selectedIntensity, repetition: selectedRepetition)
+        delegate?.doneTagging(exercise, intensity: selectedIntensity, repetition: selectedRepetition)
     }
     
 }
@@ -196,8 +196,12 @@ class LiveSessionClassificationController : UITableViewController, ExerciseSessi
     
     // MARK: LiveSessionClassificationTagDelegate code
     
-    func doneTagging(intensity: Exercise.ExerciseIntensityKey, repetition: Int) {
-        // TODO: send data to server
+    func doneTagging(exercise: Exercise.Exercise, intensity: Exercise.ExerciseIntensityKey, repetition: Int) {
+        let actualExercise = Exercise.Exercise(name: exercise.name, intensity: intensity, metric: nil)
+        for i in 0..<repetition {
+            session.explicitClassificationTag(actualExercise)
+        }
+        session.endExplicitClassification()
         
         isTagging = false
         tagView.hidden = true
