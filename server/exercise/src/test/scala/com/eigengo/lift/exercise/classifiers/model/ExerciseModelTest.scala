@@ -274,12 +274,12 @@ class ExerciseModelTest
     }
   }
 
-  // After some empty or non-empty path, wrist is tapped with 80% probability
-  property("<true@wrist *> (tap@wrist >= 0.8)") {
+  // At some point in time, the wrist is tapped with 80% probability
+  property("<true *> (tap@wrist >= 0.8)") {
     val watchQuery =
       Exists(
         Repeat(
-          AssertFact(Assert(True, SensorDataSourceLocationWrist))
+          AssertFact(True)
         ),
         Formula(Assert(Gesture("tap", 0.8), SensorDataSourceLocationWrist))
       )
@@ -313,15 +313,15 @@ class ExerciseModelTest
     }
   }
 
-  // After some non-empty path ending in a wrist tap (with 80% probability), heart rate (measured at the chest) is above 180
-  property("<(true@wrist)*; (tap@wrist >= 0.8)> (heartrate@chest >= 180)") {
+  // At some point in time, we tap the wrist tap (with 80% probability) and then have a heart rate (measured at the chest) above 180
+  property("<true *; (tap@wrist >= 0.8)> (heartrate@chest >= 180)") {
     case class Heartrate(rate: Int) extends Fact
 
     val watchQuery =
       Exists(
         Sequence(
           Repeat(
-            AssertFact(Assert(True, SensorDataSourceLocationWrist))
+            AssertFact(True)
           ),
           AssertFact(Assert(Gesture("tap", 0.8), SensorDataSourceLocationWrist))
         ),

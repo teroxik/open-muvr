@@ -2,7 +2,6 @@ package com.eigengo.lift.exercise.classifiers.model.provers
 
 import com.eigengo.lift.exercise.classifiers.ExerciseModel
 import com.eigengo.lift.exercise.classifiers.model.SMTInterface
-import com.eigengo.lift.exercise.classifiers.workflows.ClassificationAssertions.{False, True}
 import com.typesafe.config.Config
 import edu.nyu.acsys.CVC4._
 import scala.collection.JavaConversions._
@@ -36,10 +35,10 @@ class CVC4(config: Config) extends SMTInterface {
   smt.setLogic("QF_UF")
 
   private def propositionToExpr(fact: Proposition): Expr = fact match {
-    case Assert(True, _) =>
+    case True =>
       em.mkConst(true)
 
-    case Assert(False, _) =>
+    case False =>
       em.mkConst(false)
 
     case prop: Assert =>

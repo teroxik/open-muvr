@@ -15,12 +15,12 @@ trait ModelGenerators {
     Gen.oneOf(SensorDataSourceLocationWrist, SensorDataSourceLocationWaist, SensorDataSourceLocationFoot, SensorDataSourceLocationChest, SensorDataSourceLocationAny)
 
   val FactGen: Gen[Fact] = frequency(
-    1 -> Gen.oneOf(True, False),
     1 -> (for { name <- arbitrary[String]; matchProbability <- arbitrary[Double] } yield Gesture(name, matchProbability)),
     1 -> (for { name <- arbitrary[String]; matchProbability <- arbitrary[Double] } yield NegGesture(name, matchProbability))
   )
 
   def PropositionGen(depth: Int = defaultDepth, sensorGen: Option[Gen[SensorDataSourceLocation]] = None): Gen[Proposition] = frequency(
+    1 -> Gen.oneOf(True, False),
     5 -> (for { sensor <- Gen.lzy(sensorGen.getOrElse(SensorQueryGen)); fact <- Gen.lzy(FactGen) } yield Assert(fact, sensor)),
     1 -> (for { fact1 <- Gen.lzy(PropositionGen(depth-1, sensorGen)); fact2 <- Gen.lzy(PropositionGen(depth-1, sensorGen)) } yield Conjunction(fact1, fact2)),
     1 -> (for { fact1 <- Gen.lzy(PropositionGen(depth-1, sensorGen)); fact2 <- Gen.lzy(PropositionGen(depth-1, sensorGen)) } yield Disjunction(fact1, fact2))

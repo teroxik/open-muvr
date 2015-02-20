@@ -9,8 +9,6 @@ object ClassificationAssertions {
    * assertions in negation normal form (NNF).
    */
   trait Fact
-  case object True extends Fact
-  case object False extends Fact
   /**
    * Named gesture matches with probability >= `matchProbability`
    */
@@ -25,12 +23,6 @@ object ClassificationAssertions {
    * size of the fact.
    */
   def not(fact: Fact): Fact = fact match {
-    case True =>
-      False
-
-    case False =>
-      True
-
     case Gesture(name, probability) =>
       NegGesture(name, probability)
 
