@@ -53,6 +53,12 @@ object UserExercises {
   case class SessionDeletedEvt(sessionId: SessionId)
 
   /**
+   * Received exercise suggestions
+   * @param suggestions the suggestions
+   */
+  case class ExerciseSuggestionsSetEvt(suggestions: Suggestions)
+
+  /**
    * The session has ended
    * @param sessionId the session id
    */
