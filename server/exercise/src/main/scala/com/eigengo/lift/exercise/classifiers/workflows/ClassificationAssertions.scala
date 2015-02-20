@@ -5,30 +5,20 @@ import com.eigengo.lift.exercise._
 object ClassificationAssertions {
 
   /**
-   * Facts that may hold of sensor data. Facts are presented in positive/negative pairs. This allows us to keep
-   * assertions in negation normal form (NNF).
+   * Facts that may hold of sensor data.
    */
-  trait Fact
+  sealed trait Fact
+
+  case class Neg(fact: GroundFact) extends Fact
+
+  /**
+   * Ground facts logically model predicates regarding actual sensor data values
+   */
+  trait GroundFact extends Fact
   /**
    * Named gesture matches with probability >= `matchProbability`
    */
-  case class Gesture(name: String, matchProbability: Double) extends Fact
-  /**
-   * Named gesture matches with probability < `matchProbability`
-   */
-  case class NegGesture(name: String, matchProbability: Double) extends Fact
-
-  /**
-   * Convenience function that provides negation on facts, whilst keeping them in NNF. Translation is linear in the
-   * size of the fact.
-   */
-  def not(fact: Fact): Fact = fact match {
-    case Gesture(name, probability) =>
-      NegGesture(name, probability)
-
-    case NegGesture(name, probability) =>
-      Gesture(name, probability)
-  }
+  case class Gesture(name: String, matchProbability: Double) extends GroundFact
 
   /**
    * Bind inferred (e.g. machine learnt) assertions to sensors in a network of sensorse.

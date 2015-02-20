@@ -16,7 +16,7 @@ trait ModelGenerators {
 
   val FactGen: Gen[Fact] = frequency(
     1 -> (for { name <- arbitrary[String]; matchProbability <- arbitrary[Double] } yield Gesture(name, matchProbability)),
-    1 -> (for { name <- arbitrary[String]; matchProbability <- arbitrary[Double] } yield NegGesture(name, matchProbability))
+    1 -> (for { name <- arbitrary[String]; matchProbability <- arbitrary[Double] } yield Neg(Gesture(name, matchProbability)))
   )
 
   def PropositionGen(depth: Int = defaultDepth, sensorGen: Option[Gen[SensorDataSourceLocation]] = None): Gen[Proposition] = frequency(

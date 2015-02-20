@@ -6,7 +6,7 @@ import akka.stream.testkit.{StreamTestKit, AkkaSpec}
 import akka.testkit.TestActorRef
 import com.eigengo.lift.exercise.UserExercisesClassifier.{Tap => TapEvent}
 import com.eigengo.lift.exercise.classifiers.ExerciseModel
-import com.eigengo.lift.exercise.classifiers.workflows.ClassificationAssertions.{NegGesture, Gesture, BindToSensors}
+import com.eigengo.lift.exercise.classifiers.workflows.ClassificationAssertions.{Neg, Gesture, BindToSensors}
 import com.eigengo.lift.exercise.{SensorDataSourceLocationWrist, AccelerometerValue, SensorNetValue, SessionProperties}
 import com.typesafe.config.ConfigFactory
 import java.text.SimpleDateFormat
@@ -66,7 +66,7 @@ class StandardExerciseModelTest extends AkkaSpec(ConfigFactory.load("classificat
       }
 
       for (index <- 0 to (msgs.length - windowSize)) {
-        val fact = if (tapIndex.contains(index)) Gesture(name, threshold) else NegGesture(name, threshold)
+        val fact = if (tapIndex.contains(index)) Gesture(name, threshold) else Neg(Gesture(name, threshold))
 
         out.expectNext(BindToSensors(Set(fact), Set(), Set(), Set(), Set(), msgs(index)))
       }

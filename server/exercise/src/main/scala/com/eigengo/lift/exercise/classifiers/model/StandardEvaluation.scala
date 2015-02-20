@@ -17,7 +17,12 @@ trait StandardEvaluation {
     case False =>
       false
 
+    case Assert(Neg(fact), sensor) =>
+      println("ASSERT:", "NOT", fact, "<-", state.toMap(sensor))
+      !state.toMap(sensor).contains(fact)
+
     case Assert(fact, sensor) =>
+      println("ASSERT:", fact, "<-", state.toMap(sensor))
       state.toMap(sensor).contains(fact)
 
     case Conjunction(fact1, fact2, remaining @ _*) =>

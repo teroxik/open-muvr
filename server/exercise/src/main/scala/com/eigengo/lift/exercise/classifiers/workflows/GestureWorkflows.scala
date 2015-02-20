@@ -56,7 +56,7 @@ class GestureWorkflows(name: String, config: Config) extends SVMClassifier {
           if (matchProbability >= threshold) {
             Some(Gesture(name, threshold))
           } else {
-            Some(NegGesture(name, threshold))
+            Some(Neg(Gesture(name, threshold)))
           }
         } else {
           // Truncated windows are never classified (these typically occur when the stream closes)

@@ -49,7 +49,7 @@ class ExerciseModelTest
       unknown,
       value
     )
-
+/*
   property("meet(complement(x), complement(y)) == complement(join(x, y))") {
     forAll(QueryValueGen, QueryValueGen) { (value1: QueryValue, value2: QueryValue) =>
       meet(complement(value1), complement(value2)) === complement(join(value1, value2))
@@ -274,17 +274,18 @@ class ExerciseModelTest
     }
   }
 
-  // At some point in time, the wrist is tapped with 80% probability
-  property("<true *> (tap@wrist >= 0.8)") {
+  // At all points in time, the wrist is tapped with 80% probability
+  property("[true *] (tap@wrist >= 0.8)") {
     val watchQuery =
-      Exists(
+      All(
         Repeat(
           AssertFact(True)
         ),
         Formula(Assert(Gesture("tap", 0.8), SensorDataSourceLocationWrist))
       )
 
-    val sinkProbe = TestProbe()
+    val traceSize = 20
+    val senderProbe = TestProbe()
     val metadata = ModelMetadata(42)
     val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
     val startDate = dateFormat.parse("1970-01-01")
@@ -293,51 +294,7 @@ class ExerciseModelTest
     val model = TestActorRef(new ExerciseModel("test", sessionProps, Set(watchQuery)) with StandardEvaluation with ActorLogging {
       // Simulate constantly detecting a tap event on the wrist
       val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(Gesture("tap", 0.8)), Set(), Set(), Set(), Set(), snv))
-      def makeDecision(query: Query, value: QueryValue, result: Boolean) = {
-        if (value.isInstanceOf[StableValue] && result) {
-          Tap
-        } else {
-          NoExercise(metadata)
-        }
-      }
-    })
-
-    forAll(listOfN(20, SensorNetValueGen)) { (events: List[SensorNetValue]) =>
-      whenever(events.nonEmpty) {
-        for (evt <- events) {
-          model ! evt
-        }
-
-        assert(sinkProbe.receiveN(events.size).forall(_.isInstanceOf[Tap.type]))
-      }
-    }
-  }
-
-  // At some point in time, we tap the wrist tap (with 80% probability) and then have a heart rate (measured at the chest) above 180
-  property("<true *; (tap@wrist >= 0.8)> (heartrate@chest >= 180)") {
-    case class Heartrate(rate: Int) extends Fact
-
-    val watchQuery =
-      Exists(
-        Sequence(
-          Repeat(
-            AssertFact(True)
-          ),
-          AssertFact(Assert(Gesture("tap", 0.8), SensorDataSourceLocationWrist))
-        ),
-        Formula(Assert(Heartrate(180), SensorDataSourceLocationChest))
-      )
-
-    val sinkProbe = TestProbe()
-    val metadata = ModelMetadata(42)
-    val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
-    val startDate = dateFormat.parse("1970-01-01")
-    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
-    implicit val cvc4 = new CVC4(system.settings.config)
-    val model = TestActorRef(new ExerciseModel("test", sessionProps, Set(watchQuery)) with StandardEvaluation with ActorLogging {
-      var tap: Boolean = true
-      // Simulate constantly detecting a wrist tap event and having a high heart rate
-      val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(Gesture("tap", 0.8)), Set(), Set(), Set(Heartrate(180)), Set(), snv))
+      // Tap instance of ClassifiedExercise encodes current evaluation state
       def makeDecision(query: Query, value: QueryValue, result: Boolean) = {
         if (result) {
           Tap
@@ -347,13 +304,136 @@ class ExerciseModelTest
       }
     })
 
-    forAll(listOfN(20, SensorNetValueGen)) { (events: List[SensorNetValue]) =>
-      whenever(events.nonEmpty) {
+    forAll(listOfN(traceSize, SensorNetValueGen)) { (events: List[SensorNetValue]) =>
+      // Protect against shrinking during test failures
+      whenever(events.length == traceSize) {
         for (evt <- events) {
-          model ! evt
+          model.tell(evt, senderProbe.ref)
         }
+        model.tell('Stop, senderProbe.ref)
 
-        assert(sinkProbe.receiveN(events.size).forall(_.isInstanceOf[Tap.type]))
+        assert(senderProbe.receiveN(events.size).forall(_.isInstanceOf[Tap.type]))
+      }
+    }
+  }
+
+  // At all points in time, we tap the wrist (with 80% probability) and then have a (chest measured) heart rate above 180
+  property("[true *; (tap@wrist >= 0.8)] (heartrate@chest >= 180)") {
+    case class Heartrate(rate: Int) extends GroundFact
+
+    val watchQuery =
+      All(
+        Sequence(
+          Repeat(
+            AssertFact(True)
+          ),
+          AssertFact(Assert(Gesture("tap", 0.8), SensorDataSourceLocationWrist))
+        ),
+        Formula(Assert(Heartrate(180), SensorDataSourceLocationChest))
+      )
+
+    val traceSize = 20
+    val senderProbe = TestProbe()
+    val metadata = ModelMetadata(42)
+    val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    val startDate = dateFormat.parse("1970-01-01")
+    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
+    implicit val cvc4 = new CVC4(system.settings.config)
+    val model = TestActorRef(new ExerciseModel("test", sessionProps, Set(watchQuery)) with StandardEvaluation with ActorLogging {
+      var tap: Boolean = true
+      // Simulate constantly detecting a wrist tap event and having a high heart rate
+      val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(Gesture("tap", 0.8)), Set(), Set(), Set(Heartrate(180)), Set(), snv))
+      // Tap instance of ClassifiedExercise encodes current evaluation state
+      def makeDecision(query: Query, value: QueryValue, result: Boolean) = {
+        if (result) {
+          Tap
+        } else {
+          NoExercise(metadata)
+        }
+      }
+    })
+
+    forAll(listOfN(traceSize, SensorNetValueGen)) { (events: List[SensorNetValue]) =>
+      // Protect against shrinking during test failures
+      whenever(events.length == traceSize) {
+        for (evt <- events) {
+          model.tell(evt, senderProbe.ref)
+        }
+        model.tell('Stop, senderProbe.ref)
+
+        assert(senderProbe.receiveN(events.size).forall(_.isInstanceOf[Tap.type]))
+      }
+    }
+  }
+*/
+  // It is always the case that, after high intensity running, medium intensity running and low intensity running (with potential rests), heart rate will be above 180 bps
+  property("[true *; running@any('high'); true *; running@any('medium'); true *; running@any('low')] (heartrate@chest >= 180)") {
+    sealed trait RunningIntensity
+    case object High extends RunningIntensity
+    case object Medium extends RunningIntensity
+    case object Low extends RunningIntensity
+    case class Running(intensity: RunningIntensity) extends GroundFact
+    case class Heartrate(rate: Int) extends GroundFact
+
+    val watchQuery =
+      All(
+        Sequence(
+          Repeat(
+            AssertFact(True)
+          ),
+          AssertFact(Assert(Running(High), SensorDataSourceLocationAny)),
+          Repeat(
+            AssertFact(True)
+          ),
+          AssertFact(Assert(Running(Medium), SensorDataSourceLocationAny)),
+          Repeat(
+            AssertFact(True)
+          ),
+          AssertFact(Assert(Running(Low), SensorDataSourceLocationAny))
+        ),
+        Formula(Assert(Heartrate(180), SensorDataSourceLocationChest))
+      )
+
+    val traceSize = 20
+    val senderProbe = TestProbe()
+    val metadata = ModelMetadata(42)
+    val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    val startDate = dateFormat.parse("1970-01-01")
+    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
+    val runningGen: Gen[Running] = frequency(
+      1 -> Gen.const(Running(High)),
+      1 -> Gen.const(Running(Medium)),
+      1 -> Gen.const(Running(Low))
+    )
+    implicit val cvc4 = new CVC4(system.settings.config)
+
+    forAll(listOfN(traceSize, SensorNetValueGen)) { (events: List[SensorNetValue]) =>
+      // Protect against shrinking during test failures
+      val model = TestActorRef(new ExerciseModel("test", sessionProps, Set(watchQuery)) with StandardEvaluation with ActorLogging {
+        var tap: Boolean = true
+        // Simulate constantly having a high heart rate and random running intensity
+        val workflow = Flow[SensorNetValue].map { snv =>
+          val x = new BindToSensors(Set(), Set(), Set(), Set(Heartrate(180)), runningGen.sample.toSet, snv)
+          println("WORKFLOW:", "BindToSensors", x.chest, x.unknown)
+          x
+        }
+        // Tap instance of ClassifiedExercise encodes current evaluation state
+        def makeDecision(query: Query, value: QueryValue, result: Boolean) = {
+          if (result) {
+            Tap
+          } else {
+            NoExercise(metadata)
+          }
+        }
+      })
+
+      whenever(events.length == traceSize) {
+        for (evt <- events) {
+          model.tell(evt, senderProbe.ref)
+        }
+        model.tell('Stop, senderProbe.ref)
+
+        assert(senderProbe.receiveN(events.size).forall(_.isInstanceOf[Tap.type]))
       }
     }
   }

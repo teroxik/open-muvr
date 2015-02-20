@@ -53,8 +53,11 @@ object ExerciseModel {
     case False =>
       True
 
-    case Assert(fact1, sensor) =>
-      Assert(ClassificationAssertions.not(fact1), sensor)
+    case Assert(Neg(fact1), sensor) =>
+      Assert(fact1, sensor)
+
+    case Assert(fact1: GroundFact, sensor) =>
+      Assert(Neg(fact1), sensor)
 
     case Conjunction(fact1, fact2, remaining @ _*) =>
       Disjunction(not(fact1), not(fact2), remaining.map(not): _*)
@@ -283,7 +286,7 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
 
   implicit val materializer = ActorFlowMaterializer(settings)
 
-  var buffer = Vector.empty[SensorNetValue]
+  var buffer = Vector.empty[(SensorNetValue, ActorRef)]
 
   /**
    * Defined by implementing subclasses. Given a new event in our sensor trace, determines the next state that our model
@@ -331,11 +334,14 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
       case UnstableValue(nextQuery) =>
         async {
           currentState = await(prover.simplify(nextQuery))
+          val x = await(prover.satisfiable(nextQuery))
+          println("UNSTABLE:", query, "-[", nextQuery, "]->", x)
 
-          makeDecision(query, UnstableValue(currentState), await(prover.satisfiable(nextQuery)))
+          makeDecision(query, UnstableValue(currentState), x)
         }
 
       case value: StableValue =>
+        println("STABLE:", query, "->", value)
         stableState = Some(value)
 
         Future(makeDecision(query, value, value.result))
@@ -425,17 +431,21 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
       log.error(s"No demand for the actor publisher and we received a SensorNet event, so dropping $event")
 
     case event: SensorNetValue =>
-      if (buffer.isEmpty && isActive && totalDemand > 0) {
+      if (isActive && buffer.isEmpty && totalDemand > 0) {
         onNext((event, sender()))
-      } else if (buffer.nonEmpty && isActive) {
-        buffer :+= event
+      } else if (isActive) {
+        buffer :+= (event, sender())
         deliverSensorNetValue()
       } else {
-        log.warning(s"Actor publisher is inactive and we received a SensorNet event, so dropping $event")
+        log.warning(s"Actor publisher is inactive and we received a SensorNet event, so dropping $event - $isActive; $totalDemand; $buffer")
       }
 
     case Request(_) =>
       deliverSensorNetValue()
+
+    case 'Stop =>
+      // FIXME: should only complete when the buffer is empty!!!
+      //onComplete()
   }
 
   @tailrec private def deliverSensorNetValue(): Unit = {
@@ -444,11 +454,11 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
       if (totalDemand <= Int.MaxValue) {
         val (use, keep) = buffer.splitAt(totalDemand.toInt)
         buffer = keep
-        use.foreach(snv => onNext((snv, sender())))
+        use.foreach { case (snv, ref) => onNext((snv, ref)) }
       } else {
         val (use, keep) = buffer.splitAt(Int.MaxValue)
         buffer = keep
-        use.foreach(snv => onNext((snv, sender())))
+        use.foreach { case (snv, ref) => onNext((snv, ref)) }
         deliverSensorNetValue()
       }
     }
