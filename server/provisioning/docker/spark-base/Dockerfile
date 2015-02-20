@@ -6,14 +6,14 @@ FROM sequenceiq/hadoop-docker:2.6.0
 # Add config files and configure script
 ADD files /root/spark_files
 
-ENV SCALA_VERSION 2.11.4
+ENV SCALA_VERSION 2.10.4
 ENV SPARK_VERSION 1.2.0
 ENV SCALA_HOME /opt/scala-$SCALA_VERSION
 ENV SPARK_HOME /opt/spark-$SPARK_VERSION
 ENV PATH $SPARK_HOME:$SCALA_HOME/bin:$PATH
 
 # Spark settings default values
-ENV SCALA_HOME /opt/scala-2.11.4
+ENV SCALA_HOME /opt/scala-2.10.4
 ENV SPARK_EXECUTOR_MEMORY 1500m
 ENV SPARK_DRIVER_MEMORY 1500m
 ENV SPARK_WORKER_MEMORY 1500m

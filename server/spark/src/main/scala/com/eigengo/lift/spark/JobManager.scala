@@ -1,23 +1,23 @@
 package com.eigengo.lift.spark
 
 import akka.actor.{ActorLogging, Props, Actor}
-import com.eigengo.lift.spark.JobManagerProtocol.{BatchJobSubmit, StreamJobSubmit, JobManagerProtocol}
-import com.eigengo.lift.spark.jobs.{Job, PrintSequence}
+import com.eigengo.lift.spark.JobManagerProtocol.{BatchJobSubmitFunction, BatchJobSubmit, StreamJobSubmit, JobManagerProtocol}
+import com.eigengo.lift.spark.jobs.{Job, PrintCassandraEvents}
 import com.typesafe.config.Config
-import org.apache.log4j.Logger
+import org.apache.spark.SparkContext
 
 object JobManagerProtocol {
   sealed trait JobManagerProtocol
   case class StreamJobSubmit(job: String) extends JobManagerProtocol
   case class BatchJobSubmit(job: String) extends JobManagerProtocol
 
+  case class BatchJobSubmitFunction[R](name: String, func: SparkContext => Either[String, R]) extends JobManagerProtocol
+
   sealed trait SparServiceResponse
   case class Analytics(data: String) extends SparServiceResponse
 }
 
 object JobManager {
-
-  val name = "spark"
 
   /**
    * Spark service props
@@ -35,8 +35,18 @@ class JobManager(
     case m: JobManagerProtocol => m match {
       case StreamJobSubmit(d) =>
         println(s"stream $d")
-      case BatchJobSubmit("PrintSequence") =>
-        submit(Job[PrintSequence], 10000)
+      case BatchJobSubmitFunction(name, func) =>
+        submit(name, func)
+      case BatchJobSubmit("PrintCassandraEvents") =>
+        val result = submit(PrintCassandraEvents(), 10000)
+        log.info(s"Job PrintCassandraEvents resulted in $result")
+      case BatchJobSubmit("SimplePrintJob") =>
+        val result = submit[String]("SimplePrintJob", (sc: SparkContext) => {
+          sc.parallelize(0 to 100).foreach(println)
+          Right("")
+        })
+        log.info(s"Job PrintCassandraEvents resulted in $result")
+
       case x @ _ => log.warning(s"Not a job $x")
     }
 
