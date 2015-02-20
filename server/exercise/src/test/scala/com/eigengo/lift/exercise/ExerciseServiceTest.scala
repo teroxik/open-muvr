@@ -23,6 +23,12 @@ object ExerciseServiceTest {
     val userId = UserId.randomId()
     val sessionId = SessionId.randomId()
 
+    val suggestions = Suggestions(
+      Suggestion.Session(dateFormat.parse("2015-02-20"), SuggestionSource.History, Seq("arms"), 1.0) ::
+      Suggestion.Rest(dateFormat.parse("2015-02-21"), SuggestionSource.History) ::
+      Suggestion.Session(dateFormat.parse("2015-02-20"), SuggestionSource.History, Seq("legs"), 1.0) :: Nil
+    )
+
     val squat = Exercise("squat", Some(1.0), None)
     val intensity = Some(1.0)
     val startDate = dateFormat.parse("1970-01-01")
@@ -147,6 +153,14 @@ class ExerciseServiceTest
     mp.packets(0).sourceLocation should be(SensorDataSourceLocationWrist)
     mp.packets(0).payload.getByte(0) should be(0xff.toByte)
     mp.packets(1).sourceLocation should be(SensorDataSourceLocationWaist)
+  }
+
+  it should "listen at POST exercise/:UserIdValue/classificaion endpoint" in {
+    Post(s"/exercise/${TestData.userId.id}/classification", TestData.suggestions) ~> underTest ~> check {
+      response.entity.asString should be(TestData.emptyResponse)
+    }
+
+    probe.expectMsg(UserExerciseSetSuggestions(TestData.userId, TestData.suggestions))
   }
 
   it should "listen at POST exercise/:UserIdValue/:SessionIdValue/end endpoint" in {
