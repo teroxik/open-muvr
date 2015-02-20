@@ -1,8 +1,8 @@
 import Foundation
 
 ///
-/// Implement this protocol to receive notifications of the user actions
-/// on the LiveSessionClassificationCell
+/// Implement this protocol to receive notifications of tagging
+/// on the LiveSessionTagView
 ///
 protocol LiveSessionClassificationTagDelegate {
     
@@ -110,8 +110,7 @@ class LiveSessionTagView : UIView {
 }
 
 ///
-/// Displays the cell of live classification exercise, allowing the user to set
-/// the repetitions, intensity, and—in the future—metric.
+/// Displays the cell of live classification exercises.
 ///
 class LiveSessionClassificationCell : UITableViewCell {
     
