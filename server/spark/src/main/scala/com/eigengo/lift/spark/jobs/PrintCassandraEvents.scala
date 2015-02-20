@@ -7,6 +7,7 @@ import akka.analytics.cassandra._
 import spray.http.Uri.Path
 import spray.client.pipelining._
 
+import scala.concurrent.Future
 import scala.util.{Success, Failure, Try}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -20,7 +21,7 @@ case class PrintCassandraEvents() extends Batch[Int, Unit] with HttpClient {
       .set("spark.cassandra.journal.keyspace", "akka")
       .set("spark.cassandra.journal.table", "messages")
 
-  override def execute(sc: SparkContext, config: Config, params: Int): Either[String, Unit] = {
+  override def execute(sc: SparkContext, config: Config, params: Int): Future[Either[String, Unit]] = {
     val result = Try {
       println("CASSANDRA EVENT TABLE: ")
       sc.eventTable().cache().collect().foreach(println)
@@ -31,10 +32,10 @@ case class PrintCassandraEvents() extends Batch[Int, Unit] with HttpClient {
       case Failure(e) => println(e)
     })
 
-    result match {
+    Future(result match {
       case Success(_) => Right((): Unit)
       case Failure(e) => Left(e.toString)
-    }
+    })
   }
 
   override def defaultParams(args: Array[String]): Int = 0

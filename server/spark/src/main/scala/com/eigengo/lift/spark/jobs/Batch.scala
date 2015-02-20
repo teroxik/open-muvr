@@ -3,6 +3,8 @@ package com.eigengo.lift.spark.jobs
 import com.typesafe.config.Config
 import org.apache.spark.{SparkConf, SparkContext}
 
+import scala.concurrent.Future
+
 trait Batch[P, R] extends App {
 
   /**
@@ -16,5 +18,5 @@ trait Batch[P, R] extends App {
 
   def additionalConfig: (Config, SparkConf) => SparkConf = (x, y) => y
 
-  def execute(sc: SparkContext, config: Config, params: P): Either[String, R]
+  def execute(sc: SparkContext, config: Config, params: P): Future[Either[String, R]]
 }

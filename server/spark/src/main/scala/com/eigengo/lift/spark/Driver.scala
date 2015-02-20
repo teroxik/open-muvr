@@ -5,6 +5,7 @@ import com.typesafe.config.Config
 import org.apache.log4j.Logger
 import org.apache.spark.{SparkConf, SparkContext}
 
+import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 trait Driver {
@@ -25,7 +26,7 @@ trait Driver {
     sc
   }
 
-  def submit[P, R](job: Batch[P, R], jobParam: P): Either[String, R] = {
+  def submit[P, R](job: Batch[P, R], jobParam: P): Future[Either[String, R]] = {
     val sc = sparkContext(job.name, job.additionalConfig)
 
     logger.info(s"Executing job ${job.name} on master $master")
@@ -36,7 +37,11 @@ trait Driver {
     result
   }
 
-  def submit[R](name: String, job: SparkContext => Either[String, R], additionalConfig: (Config, SparkConf) => SparkConf = (x, y) => y) = {
+  def submit[R](
+      name: String,
+      job: SparkContext => Future[Either[String, R]],
+      additionalConfig: (Config, SparkConf) => SparkConf = (x, y) => y): Future[Either[String, R]] = {
+
     val sc = sparkContext(name, additionalConfig)
 
     logger.info(s"Executing job ${name} on master $master")

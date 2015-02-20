@@ -25,5 +25,5 @@ object Spark extends App with Logging {
 
   val manager = system.actorOf(JobManager.props(master, config))
 
-  system.scheduler.schedule(0 seconds, 30 seconds)(manager ! BatchJobSubmit("PrintCassandraEvents"))(system.dispatcher) 
+  system.scheduler.schedule(0 seconds, 60 seconds)(manager ! BatchJobSubmit("PrintCassandraEvents"))(system.dispatcher)
 }
