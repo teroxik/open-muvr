@@ -34,70 +34,6 @@ trait StandardEvaluation {
       results.contains(true)
   }
 
-  def emptyEvaluate(query: Query): QueryValue = query match {
-    case Formula(_) =>
-      log.debug(s"\n  empty |== $query\n  ~~> ## FALSE ##")
-      StableValue(result = false)
-
-    case TT =>
-      log.debug("\n  empty |== TT\n  ~~> ## TRUE ##")
-      StableValue(result = true)
-
-    case FF =>
-      log.debug("\n  empty |== FF\n  ~~> ## FALSE ##")
-      StableValue(result = false)
-
-    case And(query1, query2, remaining @ _*) =>
-      log.debug(s"\n  empty |== $query${(query1 +: query2 +: remaining).map(q => s"\n  ~~> && empty |== $q").mkString("")}")
-      val results = (query1 +: query2 +: remaining).map(q => emptyEvaluate(q))
-      results.foldRight[QueryValue](StableValue(result = true)) { case (p, q) => meet(p, q) }
-
-    case Or(query1, query2, remaining @ _*) =>
-      log.debug(s"\n  empty |== $query${(query1 +: query2 +: remaining).map(q => s"\n  ~~> || empty |== $q").mkString("")}")
-      val results = (query1 +: query2 +: remaining).map(q => emptyEvaluate(q))
-      results.foldRight[QueryValue](StableValue(result = false)) { case (p, q) => join(p, q) }
-
-    case Exists(AssertFact(_), _) =>
-      log.debug(s"\n  empty |== $query\n  ~~> ## FALSE ##")
-      StableValue(result = false)
-
-    case Exists(Test(query1), query2) =>
-      log.debug(s"\n  empty |== $query\n  ~~> && empty |== $query1\n  ~~> && empty |== $query2")
-      meet(emptyEvaluate(query1), emptyEvaluate(query2))
-
-    case Exists(Choice(path1, path2, remainingPaths @ _*), query1) =>
-      log.debug(s"\n  empty |== $query${(path1 +: path2 +: remainingPaths).map(p => s"\n  ~~> && empty |== Exists($p, $query1)").mkString("")}")
-      emptyEvaluate(Or(Exists(path1, query1), Exists(path2, query1), remainingPaths.map(p => Exists(p, query1)): _*))
-
-    case Exists(Sequence(path1, path2, remainingPaths @ _*), query1) =>
-      log.debug(s"\n  empty |== $query\n  ~~> empty |== ${Exists(path1, Exists(path2, remainingPaths.foldRight(query1) { case (p, q) => Exists(p, q) }))}")
-      emptyEvaluate(Exists(path1, Exists(path2, remainingPaths.foldRight(query1) { case (p, q) => Exists(p, q) })))
-
-    case Exists(Repeat(path), query1) =>
-      log.debug(s"\n  empty |== $query\n  ~~> empty |== $query1")
-      emptyEvaluate(query1)
-
-    case All(AssertFact(_), _) =>
-      log.debug(s"\n  empty |== $query\n  ~~> ## TRUE ##")
-      StableValue(result = true)
-
-    case All(Test(query1), query2) =>
-      log.debug(s"\n  empty |== $query\n  ~~> || empty |== ~ $query1\n  ~~> || empty |== $query2")
-      join(emptyEvaluate(ExerciseModel.not(query1)), emptyEvaluate(query2))
-
-    case All(Choice(path1, path2, remainingPaths @ _*), query1) =>
-      log.debug(s"\n  empty |== $query${(path1 +: path2 +: remainingPaths).map(p => s"\n  ~~> && empty |== All($p, $query1)").mkString("")}")
-      emptyEvaluate(And(All(path1, query1), All(path2, query1), remainingPaths.map(p => All(p, query1)): _*))
-
-    case All(Sequence(path1, path2, remainingPaths @ _*), query1) =>
-      log.debug(s"\n  empty |== $query\n  ~~> empty |== ${All(path1, All(path2, remainingPaths.foldRight(query1) { case (p, q) => All(p, q) }))}")
-      emptyEvaluate(All(path1, All(path2, remainingPaths.foldRight(query1) { case (p, q) => All(p, q) })))
-
-    case All(Repeat(path), query1) =>
-      log.debug(s"\n  empty |== $query\n  ~~> empty |== $query1")
-      emptyEvaluate(query1)
-  }
-
   def evaluateQuery(query: Query)(state: BindToSensors, lastState: Boolean): QueryValue = query match {
     case Formula(fact) =>
       val result = evaluateAtSensor(fact, state)
@@ -115,7 +51,7 @@ trait StandardEvaluation {
     case And(query1, query2, remaining @ _*) =>
       log.debug(s"st = $state\n  st |== $query${(query1 +: query2 +: remaining).map(q => s"\n  ~~> && st |== $q").mkString("")}")
       val results = (query1 +: query2 +: remaining).map(q => evaluateQuery(q)(state, lastState))
-      results.foldRight[QueryValue](StableValue(result = false)) { case (p, q) => meet(p, q) }
+      results.foldRight[QueryValue](StableValue(result = true)) { case (p, q) => meet(p, q) }
 
     case Or(query1, query2, remaining @ _*) =>
       log.debug(s"st = $state\n  st |== $query${(query1 +: query2 +: remaining).map(q => s"\n  ~~> || st |== $q").mkString("")}")
@@ -126,11 +62,6 @@ trait StandardEvaluation {
       // for some `AssertFact(fact)` step (whilst not in last trace step)
       log.debug(s"st = $state\n  st |== $query\n  ~~> && st |=/= End \t## TRUE ##\n  ~~> && st |== $fact \t## TRUE ##\n  ~~> && st |== '$query1'")
       UnstableValue(query1)
-
-    case Exists(AssertFact(fact), query1) if lastState && evaluateAtSensor(fact, state) =>
-      // for some `AssertFact(fact)` step (whilst in last trace step)
-      log.debug(s"st = $state\n  st |== $query\n  ~~> && st |== End \t## TRUE ##\n  ~~> && st |== $fact \t## TRUE ##\n  ~~> && empty |== $query1")
-      emptyEvaluate(query1)
 
     case Exists(AssertFact(_), _) =>
       // No `AssertFact(_)` steps possible
@@ -164,11 +95,6 @@ trait StandardEvaluation {
       // for all `AssertFact(fact)` steps (whilst not in last trace step)
       log.debug(s"st = $state\n  st |== $query\n  ~~> && st |=/= End \t## TRUE ##\n  ~~> && st |== $fact \t## TRUE ##\n  ~~> && st |== '$query1'")
       UnstableValue(query1)
-
-    case All(AssertFact(fact), query1) if lastState && evaluateAtSensor(fact, state) =>
-      // for all `AssertFact(fact)` steps (whilst in last trace state)
-      log.debug(s"st = $state\n  st |== $query\n  ~~> && st |== End \t## TRUE ##\n  ~~> && st |== $fact \t## TRUE ##\n  ~~> && empty |== $query1")
-      emptyEvaluate(query1)
 
     case All(AssertFact(_), _) =>
       // No `AssertFact(_)` steps possible

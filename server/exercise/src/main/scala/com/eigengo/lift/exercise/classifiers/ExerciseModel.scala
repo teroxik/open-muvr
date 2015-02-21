@@ -200,7 +200,7 @@ object ExerciseModel {
   /**
    * Denotes the last step of the exercise session
    */
-  val Last: Query = Exists(AssertFact(True), End)
+  val Last: Query = All(AssertFact(True), End)
 
   /**
    * Following definitions allow linear-time logic to be encoded within the current logic. Translation here is linear in
@@ -370,18 +370,16 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
         case List(event, _) =>
           evaluateQuery(currentState)(event, lastState = false)
       }
+      log.debug(s"\n  EVALUATE: $currentState\n  ~~> $result")
       result match {
         case UnstableValue(nextQuery) =>
           async {
             if (await(prover.satisfiable(nextQuery))) {
-              log.debug(s"\n  UNSTABLE:\n  ** CURRENT => $currentState\n  ** NEXT    => $nextQuery")
-
               currentState = await(prover.simplify(nextQuery))
+
               makeDecision(query, UnstableValue(currentState))
             } else {
               // `nextQuery` is unsatisfiable - so no LDL unwinding of this formula will allow it to become true
-              log.debug(s"\n  STABLE:\n  ** CURRENT => $currentState\n  ** VALUE => false")
-
               makeDecision(query, StableValue(result = false))
             }
           }
@@ -389,7 +387,6 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
         case value: StableValue =>
           stableState = Some(value)
 
-          log.debug(s"\n  STABLE:\n  ** CURRENT => $currentState\n  ** VALUE => ${value.result}")
           Future(makeDecision(query, value))
       }
     }
