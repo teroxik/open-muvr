@@ -73,6 +73,7 @@ class LiveSessionTagView : UIView {
             button.backgroundColor = self.nonSelectedButtonColor
         }
         defaultIntensityButton.backgroundColor = selectedButtonColor
+        selectedIntensity = intensities[0]
         
         getRepetitionButtons().zipWithIndex().foreach { (i, button) -> Void in
             button.setTitle(self.intensities[i].intensity.title, forState: allStates)
@@ -80,6 +81,7 @@ class LiveSessionTagView : UIView {
             button.backgroundColor = self.nonSelectedButtonColor
         }
         defaultRepetitionsButton.backgroundColor = selectedButtonColor
+        selectedRepetition = repetitions[0]
         
         self.exercise = exercise
     }
