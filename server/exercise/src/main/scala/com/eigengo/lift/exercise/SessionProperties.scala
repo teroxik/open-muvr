@@ -14,7 +14,6 @@ object SessionId {
   def randomId(): SessionId = SessionId(UUID.randomUUID())
 }
 
-
 /**
  * The exercise session props
  * @param startDate the start date

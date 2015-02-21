@@ -95,9 +95,16 @@ object UserExercisesProcessor {
   /**
    * User classification end
    * @param userId the user
-   * @param sesionId the session
+   * @param sessionId the session
    */
-  case class UserExerciseExplicitClassificationEnd(userId: UserId, sesionId: SessionId)
+  case class UserExerciseExplicitClassificationEnd(userId: UserId, sessionId: SessionId)
+
+  /**
+   * Sets the exercise suggestions for the given user id
+   * @param userId the user identity
+   * @param suggestions the suggestions
+   */
+  case class UserExerciseSetSuggestions(userId: UserId, suggestions: Suggestions)
 
   /**
    * Receive multiple packets of data for the given ``userId`` and ``sessionId``. The ``packets`` is a ZIP archive
@@ -180,6 +187,12 @@ object UserExercisesProcessor {
   private case class ExerciseExplicitClassificationEnd(sessionId: SessionId)
 
   /**
+   * Exercise suggestions
+   * @param suggestions the suggestions
+   */
+  private case class ExerciseSetSuggestions(suggestions: Suggestions)
+
+  /**
    * Abandons the give exercise session
    * @param sessionId the session identity
    */
@@ -236,6 +249,7 @@ object UserExercisesProcessor {
     case UserExerciseSessionAbandon(userId, sessionId)                        ⇒ (userId.toString, ExerciseSessionAbandon(sessionId))
     case UserExerciseSessionReplayProcessData(userId, sessionId, data)        ⇒ (userId.toString, ExerciseSessionReplayProcessData(sessionId, data))
     case UserExerciseSessionReplayStart(userId, sessionId, props)             ⇒ (userId.toString, ExerciseSessionReplayStart(sessionId, props))
+    case UserExerciseSetSuggestions(userId, suggestions)                      ⇒ (userId.toString, ExerciseSetSuggestions(suggestions))
     case UserExerciseExplicitClassificationStart(userId, sessionId, exercise) ⇒ (userId.toString, ExerciseExplicitClassificationStart(sessionId, exercise))
     case UserExerciseExplicitClassificationTag(userId, sessionId, exercise)   ⇒ (userId.toString, ExerciseExplicitClassificationTag(sessionId, exercise))
     case UserExerciseExplicitClassificationEnd(userId, sessionId)             ⇒ (userId.toString, ExerciseExplicitClassificationEnd(sessionId))
@@ -259,6 +273,7 @@ object UserExercisesProcessor {
     case UserExerciseExplicitClassificationExamples(userId, _) ⇒ s"${userId.hashCode() % 10}"
     case UserExerciseSessionReplayProcessData(userId, _, _)    ⇒ s"${userId.hashCode() % 10}"
     case UserExerciseSessionReplayStart(userId, _, _)          ⇒ s"${userId.hashCode() % 10}"
+    case UserExerciseSetSuggestions(userId, _)                 ⇒ s"${userId.hashCode() % 10}"
   }
 }
 
@@ -465,6 +480,11 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
 
     case ExerciseSessionDelete(sessionId) ⇒
       persist(SessionDeletedEvt(sessionId)) { evt ⇒
+        sender() ! \/.right(())
+      }
+
+    case ExerciseSetSuggestions(suggestions) ⇒
+      persist(ExerciseSuggestionsSetEvt(suggestions)) { evt ⇒
         sender() ! \/.right(())
       }
 

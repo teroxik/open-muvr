@@ -96,6 +96,17 @@ trait ExerciseService extends Directives with ExerciseMarshallers {
         }
       }
     } ~
+    path("exercise" / UserIdValue / "classification") { userId ⇒
+      get {
+        // TODO: Tam, when your statistics view is done, reply here with the result
+        complete("{}")
+      } ~
+      post {
+        handleWith { suggestions: Suggestions ⇒
+          (userExercisesProcessor ? UserExerciseSetSuggestions(userId, suggestions)).mapRight[Unit]
+        }
+      }
+    } ~
     path("exercise" / UserIdValue / SessionIdValue / "classification") { (userId, sessionId) ⇒
       get {
         complete {
