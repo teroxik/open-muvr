@@ -27,15 +27,25 @@ trait SensorValue
  */
 sealed trait SensorDataSourceLocation
 /// sensor on a wrist: typically a smart watch
-case object SensorDataSourceLocationWrist extends SensorDataSourceLocation
+case object SensorDataSourceLocationWrist extends SensorDataSourceLocation {
+  override def toString = "wrist"
+}
 /// sensor around user's waist: e.g. mobile in a pocket
-case object SensorDataSourceLocationWaist extends SensorDataSourceLocation
+case object SensorDataSourceLocationWaist extends SensorDataSourceLocation {
+  override def toString = "waist"
+}
 /// sensor near the user's foot: e.g. shoe sensor
-case object SensorDataSourceLocationFoot extends SensorDataSourceLocation
+case object SensorDataSourceLocationFoot extends SensorDataSourceLocation {
+  override def toString = "foot"
+}
 /// sensor near the user's chest: typically a HR belt
-case object SensorDataSourceLocationChest extends SensorDataSourceLocation
+case object SensorDataSourceLocationChest extends SensorDataSourceLocation {
+  override def toString = "chest"
+}
 /// sensor with unknown location or where the location does not make a difference
-case object SensorDataSourceLocationAny extends SensorDataSourceLocation
+case object SensorDataSourceLocationAny extends SensorDataSourceLocation {
+  override def toString = "any"
+}
 
 object Sensor {
   val sourceLocations = Set(

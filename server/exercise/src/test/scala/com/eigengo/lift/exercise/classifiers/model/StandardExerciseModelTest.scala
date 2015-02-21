@@ -43,7 +43,7 @@ class StandardExerciseModelTest extends AkkaSpec(ConfigFactory.load("classificat
 
     def component(in: Source[SensorNetValue], out: Sink[BindToSensors]) = {
       val workflow = TestActorRef(new StandardExerciseModel(sessionProps, SensorDataSourceLocationWrist) {
-        def makeDecision(query: Query, value: QueryValue, result: Boolean) = TapEvent
+        def makeDecision(query: Query, value: QueryValue) = TapEvent
       }).underlyingActor.workflow
       workflow.runWith(in, out)
     }

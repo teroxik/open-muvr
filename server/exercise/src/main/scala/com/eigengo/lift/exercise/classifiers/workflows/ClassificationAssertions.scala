@@ -7,9 +7,13 @@ object ClassificationAssertions {
   /**
    * Facts that may hold of sensor data.
    */
-  sealed trait Fact
+  sealed trait Fact {
+    def toString(sensor: SensorDataSourceLocation): String
+  }
 
-  case class Neg(fact: GroundFact) extends Fact
+  case class Neg(fact: GroundFact) extends Fact {
+    def toString(sensor: SensorDataSourceLocation) = "~" + fact.toString(sensor)
+  }
 
   /**
    * Ground facts logically model predicates regarding actual sensor data values
@@ -18,10 +22,14 @@ object ClassificationAssertions {
   /**
    * Named gesture matches with probability >= `matchProbability`
    */
-  case class Gesture(name: String, matchProbability: Double) extends GroundFact
+  case class Gesture(name: String, matchProbability: Double) extends GroundFact {
+    def toString(sensor: SensorDataSourceLocation): String = {
+      s"($name@$sensor >= $matchProbability)"
+    }
+  }
 
   /**
-   * Bind inferred (e.g. machine learnt) assertions to sensors in a network of sensorse.
+   * Bind inferred (e.g. machine learnt) assertions to sensors in a network of sensors.
    *
    * @param wrist   facts true of this location
    * @param waist   facts true of this location
@@ -38,6 +46,8 @@ object ClassificationAssertions {
       SensorDataSourceLocationChest -> chest,
       SensorDataSourceLocationAny -> unknown
     )
+
+    override def toString = s"BindToSensors($SensorDataSourceLocationWrist = $wrist; $SensorDataSourceLocationWaist = $waist; $SensorDataSourceLocationFoot = $foot; $SensorDataSourceLocationChest = $chest; $SensorDataSourceLocationAny = $unknown; value = ...)"
   }
 
   object BindToSensors {

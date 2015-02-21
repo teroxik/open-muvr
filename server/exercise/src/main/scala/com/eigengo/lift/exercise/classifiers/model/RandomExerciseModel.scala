@@ -68,17 +68,18 @@ class RandomExerciseModel(sessionProps: SessionProperties)
   def evaluateQuery(query: Query)(current: BindToSensors, lastState: Boolean) =
     StableValue(result = true)
 
-  def makeDecision(query: Query, value: QueryValue, result: Boolean) =
-    if (result) {
+  def makeDecision(query: Query, value: QueryValue) = value match {
+    case StableValue(true) =>
       val exercise = (query: @unchecked) match {
         case Formula(Assert(Gesture(nm, _), _)) =>
           Exercise(nm, None, None)
       }
 
       FullyClassifiedExercise(metadata, 1.0, exercise)
-    } else {
+
+    case _ =>
       UnclassifiedExercise(metadata)
-    }
+  }
 
   /**
    * We use `aroundReceive` here to print out a summary `SensorNet` message.
