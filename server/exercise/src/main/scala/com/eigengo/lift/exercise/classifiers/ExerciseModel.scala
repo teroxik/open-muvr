@@ -374,9 +374,17 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
       result match {
         case UnstableValue(nextQuery) =>
           async {
-            if (await(prover.satisfiable(nextQuery))) {
-              currentState = await(prover.simplify(nextQuery))
+            // We interact with the prover concurrently to determine validity of, satisfiability of and simplify `nextQuery`
+            val validQuery = prover.valid(nextQuery)
+            val satisfiableQuery = prover.satisfiable(nextQuery)
+            val simplifiedQuery = prover.simplify(nextQuery)
 
+            if (await(validQuery)) {
+              // `nextQuery` is valid - so any LDL unwinding of this formula will allow it to become true
+              makeDecision(query, StableValue(result = true))
+            } else if (await(satisfiableQuery)) {
+              // We need to unwind LDL formula further in order to determine its validity
+              currentState = await(simplifiedQuery)
               makeDecision(query, UnstableValue(currentState))
             } else {
               // `nextQuery` is unsatisfiable - so no LDL unwinding of this formula will allow it to become true
