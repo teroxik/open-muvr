@@ -335,12 +335,12 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
   protected def evaluateQuery(current: Query)(event: BindToSensors, lastState: Boolean): QueryValue
 
   /**
-   * Defined by implementing subclasses. Determines the message sent back to the UserExercisesProcessor.
+   * Defined by implementing subclasses. Configurable flow that determines the (optional) message sent back to the
+   * UserExercisesProcessor.
    *
    * @param query  query that we have been requested to watch
-   * @param value  current model evaluated value for this query
    */
-  protected def makeDecision(query: Query, value: QueryValue): ClassifiedExercise
+  protected def makeDecision(query: Query): Flow[QueryValue, Option[ClassifiedExercise]]
 
   /**
    * Defined by implementing subclasses. Configurable flow defined by implementing subclasses
@@ -381,21 +381,21 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
 
             if (await(validQuery)) {
               // `nextQuery` is valid - so any LDL unwinding of this formula will allow it to become true
-              makeDecision(query, StableValue(result = true))
+              StableValue(result = true)
             } else if (await(satisfiableQuery)) {
               // We need to unwind LDL formula further in order to determine its validity
               currentState = await(simplifiedQuery)
-              makeDecision(query, UnstableValue(currentState))
+              UnstableValue(currentState)
             } else {
               // `nextQuery` is unsatisfiable - so no LDL unwinding of this formula will allow it to become true
-              makeDecision(query, StableValue(result = false))
+              StableValue(result = false)
             }
           }
 
         case value: StableValue =>
           stableState = Some(value)
 
-          Future(makeDecision(query, value))
+          Future(value)
       }
     }
   }
@@ -416,14 +416,16 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
       // We have at least one query to watch and report upon
       FlowGraph { implicit builder =>
         val split = Unzip[SensorNetValue, ActorRef]
-        val join = Zip[ClassifiedExercise, ActorRef]
+        val join = Zip[Option[ClassifiedExercise], ActorRef]
         val query = toWatch.head
 
         Source(ActorPublisher(self)) ~> split.in
         // 2 element sliding window allows workflow to look ahead one step and determine if the event trace is in its last state or not
-        split.left ~> workflow.transform(() => SlidingWindow[BindToSensors](2)) ~> evaluate(query) ~> join.left
+        split.left ~> workflow.transform(() => SlidingWindow[BindToSensors](2)) ~> evaluate(query) ~> makeDecision(query) ~> join.left
         split.right ~> join.right
-        join.out ~> Sink.foreach[(ClassifiedExercise, ActorRef)] { case (exercise, ref) => ref ! exercise }
+        join.out ~> Flow[(Option[ClassifiedExercise], ActorRef)]
+          .filter(_._1.nonEmpty)
+          .map { case (ex, ref) => (ex.get, ref) } ~> Sink.foreach[(ClassifiedExercise, ActorRef)] { case (exercise, ref) => ref ! exercise }
       }
     } else {
       // We have multiple queries to watch and report upon
@@ -437,11 +439,13 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
         split.left ~> workflow.transform(() => SlidingWindow[BindToSensors](2)) ~> event
         split.right ~> listener
         for (query <- toWatch) {
-          val join = Zip[ClassifiedExercise, ActorRef]
+          val join = Zip[Option[ClassifiedExercise], ActorRef]
 
-          event ~> evaluate(query) ~> join.left
+          event ~> evaluate(query) ~> makeDecision(query) ~> join.left
           listener ~> join.right
-          join.out ~> Sink.foreach[(ClassifiedExercise, ActorRef)] { case (exercise, ref) => ref ! exercise }
+          join.out ~> Flow[(Option[ClassifiedExercise], ActorRef)]
+            .filter(_._1.nonEmpty)
+            .map { case (ex, ref) => (ex.get, ref) } ~> Sink.foreach[(ClassifiedExercise, ActorRef)] { case (exercise, ref) => ref ! exercise }
         }
       }
     }
