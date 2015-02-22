@@ -165,7 +165,7 @@ class ExerciseModelTest
     val model = TestActorRef(new ExerciseModel("test", sessionProps) with ActorLogging {
       val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(), Set(), Set(), Set(), Set(), snv))
       def evaluateQuery(formula: Query)(current: BindToSensors, lastState: Boolean) = StableValue(result = true)
-      def makeDecision(query: Query, value: QueryValue) = Tap
+      def makeDecision(query: Query) = Flow[QueryValue].map(_ => Some(Tap))
       override def aroundReceive(receive: Receive, msg: Any) = msg match {
         case value: SensorNetValue =>
           modelProbe.ref ! value
@@ -206,9 +206,9 @@ class ExerciseModelTest
     val model = TestActorRef(new ExerciseModel("test", sessionProps) with ActorLogging {
       val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(), Set(), Set(), Set(), Set(), snv))
       def evaluateQuery(formula: Query)(current: BindToSensors, lastState: Boolean) = StableValue(result = true)
-      def makeDecision(query: Query, value: QueryValue) = {
+      def makeDecision(query: Query) = Flow[QueryValue].map { value =>
         modelProbe.ref ! (query, value)
-        Tap
+        Some(Tap)
       }
     })
 
@@ -240,9 +240,9 @@ class ExerciseModelTest
     val model = TestActorRef(new ExerciseModel("test", sessionProps, Set(example)) with ActorLogging {
       val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(), Set(), Set(), Set(), Set(), snv))
       def evaluateQuery(formula: Query)(current: BindToSensors, lastState: Boolean) = StableValue(result = true)
-      def makeDecision(query: Query, value: QueryValue) = {
+      def makeDecision(query: Query) = Flow[QueryValue].map { value =>
         modelProbe.ref ! (query, value)
-        Tap
+        Some(Tap)
       }
     })
 
@@ -276,9 +276,9 @@ class ExerciseModelTest
     val model = TestActorRef(new ExerciseModel("test", sessionProps, Set(example1, example2)) with ActorLogging {
       val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(), Set(), Set(), Set(), Set(), snv))
       def evaluateQuery(formula: Query)(current: BindToSensors, lastState: Boolean) = StableValue(result = true)
-      def makeDecision(query: Query, value: QueryValue) = {
+      def makeDecision(query: Query) = Flow[QueryValue].map { value =>
         modelProbe.ref ! (query, value)
-        Tap
+        Some(Tap)
       }
     })
 
@@ -317,11 +317,11 @@ class ExerciseModelTest
           // Simulate constantly detecting a tap event on the wrist
           val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(Gesture("tap", 0.8)), Set(), Set(), Set(), Set(), snv))
           // Tap instance of ClassifiedExercise encodes current evaluation state
-          def makeDecision(query: Query, value: QueryValue) = value match {
+          def makeDecision(query: Query) = Flow[QueryValue].map {
             case StableValue(true) =>
-              Tap
+              Some(Tap)
             case _ =>
-              NoExercise(metadata)
+              Some(NoExercise(metadata))
           }
         })
 
@@ -357,11 +357,11 @@ class ExerciseModelTest
           // Simulate constantly detecting a tap event on the wrist
           val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(Gesture("tap", 0.8)), Set(), Set(), Set(Heartrate(180)), Set(), snv))
           // Tap instance of ClassifiedExercise encodes current evaluation state
-          def makeDecision(query: Query, value: QueryValue) = value match {
+          def makeDecision(query: Query) = Flow[QueryValue].map {
             case StableValue(true) =>
-              Tap
+              Some(Tap)
             case _ =>
-              NoExercise(metadata)
+              Some(NoExercise(metadata))
           }
         })
 
@@ -399,11 +399,11 @@ class ExerciseModelTest
           // Simulate constantly detecting a tap event on the wrist
           val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(Gesture("tap", 0.8)), Set(), Set(), Set(Heartrate(180)), Set(), snv))
           // Tap instance of ClassifiedExercise encodes current evaluation state
-          def makeDecision(query: Query, value: QueryValue) = value match {
+          def makeDecision(query: Query) = Flow[QueryValue].map {
             case StableValue(true) =>
-              Tap
+              Some(Tap)
             case _ =>
-              NoExercise(metadata)
+              Some(NoExercise(metadata))
           }
         })
 
@@ -433,11 +433,11 @@ class ExerciseModelTest
           val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(Gesture("tap", 0.8)), Set(), Set(), Set(), Set(), snv))
 
           // Tap instance of ClassifiedExercise encodes current evaluation state
-          def makeDecision(query: Query, value: QueryValue) = value match {
+          def makeDecision(query: Query) = Flow[QueryValue].map {
             case StableValue(true) =>
-              Tap
+              Some(Tap)
             case _ =>
-              NoExercise(metadata)
+              Some(NoExercise(metadata))
           }
         })
 
@@ -478,11 +478,11 @@ class ExerciseModelTest
           // Simulate constantly detecting a tap event on the wrist
           val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(Gesture("tap", 0.8)), Set(), Set(), Set(), Set(), snv))
           // Tap instance of ClassifiedExercise encodes current evaluation state
-          def makeDecision(query: Query, value: QueryValue) = value match {
+          def makeDecision(query: Query) = Flow[QueryValue].map {
             case StableValue(true) =>
-              Tap
+              Some(Tap)
             case _ =>
-              NoExercise(metadata)
+              Some(NoExercise(metadata))
           }
         })
 
@@ -520,11 +520,11 @@ class ExerciseModelTest
         // Simulate constantly detecting a wrist tap event and having a high heart rate
         val workflow = Flow[SensorNetValue].map(snv => new BindToSensors(Set(Gesture("tap", 0.8)), Set(), Set(), Set(Heartrate(180)), Set(), snv))
         // Tap instance of ClassifiedExercise encodes current evaluation state
-        def makeDecision(query: Query, value: QueryValue) = value match {
+        def makeDecision(query: Query) = Flow[QueryValue].map {
           case StableValue(true) =>
-            Tap
+            Some(Tap)
           case _ =>
-            NoExercise(metadata)
+            Some(NoExercise(metadata))
         }
       })
 
@@ -581,11 +581,11 @@ class ExerciseModelTest
           new BindToSensors(Set(), Set(), Set(), Set(Heartrate(180)), runningGen.sample.toSet, snv)
         }
         // Tap instance of ClassifiedExercise encodes current evaluation state
-        def makeDecision(query: Query, value: QueryValue) = value match {
+        def makeDecision(query: Query) = Flow[QueryValue].map {
           case StableValue(true) =>
-            Tap
+            Some(Tap)
           case _ =>
-            NoExercise(metadata)
+            Some(NoExercise(metadata))
         }
       })
 
