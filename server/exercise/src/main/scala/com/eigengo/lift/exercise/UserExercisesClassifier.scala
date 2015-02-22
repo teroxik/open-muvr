@@ -79,11 +79,11 @@ class UserExercisesClassifier(sessionProperties: SessionProperties, modelProps: 
     // TODO: refactor code so that the following assumptions may be weakened further!
     case sdwls: ClassifyExerciseEvt =>
       require(
-        !sdwls.sensorData.isEmpty,
+        sdwls.sensorData.nonEmpty,
         "at least one sensor locations are present in the `ClassifyExerciseEvt` instance and have data"
       )
       val sensorsGrouped = sdwls.sensorData.groupBy(_.location).mapValues(_.map(_.data))
-      val firstLocation = sensorsGrouped.collectFirst { case (location, _) ⇒ location }.get
+      val (firstLocation, _) = sensorsGrouped.head
       val emptyDataValues: List[List[SensorData]] = sensorsGrouped(firstLocation).map(_.map(originalData ⇒
         AccelerometerData(originalData.samplingRate, originalData.values.map(_ ⇒ AccelerometerValue(0, 0, 0)))))
       val sensorMap: Map[SensorDataSourceLocation, List[List[SensorData]]] =
