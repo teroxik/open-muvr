@@ -45,6 +45,13 @@ class ExerciseSession : NSObject {
         LiftServer.sharedInstance.exerciseSessionStartExplicitClassification(CurrentLiftUser.userId!, sessionId: id, exercise: exercise, f: const(()))
     }
     
+    /**
+    * Tag the given exercise with user input
+    */
+    func explicitClassificationTag(exercise: Exercise.Exercise) -> Void {
+        LiftServer.sharedInstance.exerciseExplicitClassificationTag(CurrentLiftUser.userId!, sessionId: id, exercise: exercise, f: const(()))
+    }
+    
     /** 
      * End explicit classification
      */

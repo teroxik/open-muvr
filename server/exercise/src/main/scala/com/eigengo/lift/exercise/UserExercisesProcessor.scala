@@ -61,6 +61,14 @@ object UserExercisesProcessor {
   case class UserExerciseExplicitClassificationStart(userId: UserId, sessionId: SessionId, exercise: Exercise)
 
   /**
+   * User tags a classified exercise.
+   * @param userId user
+   * @param sessionId session
+   * @param exercise the exercise
+   */
+  case class UserExerciseExplicitClassificationTag(userId: UserId, sessionId: SessionId, exercise: Exercise)
+
+  /**
    * Sets the metric of all the exercises in the current set that don't have a metric yet. So, suppose the user is in
    * a set doing squats, and the system's events are
    *
@@ -137,6 +145,13 @@ object UserExercisesProcessor {
    * @param exercise the exercise
    */
   private case class ExerciseExplicitClassificationStart(sessionId: SessionId, exercise: Exercise)
+
+  /**
+   * User tagged a classified exercise.
+   * @param sessionId session
+   * @param exercise the exercise
+   */
+  private case class ExerciseExplicitClassificationTag(sessionId: SessionId, exercise: Exercise)
 
   /**
    * Obtain list of classification examples
@@ -236,6 +251,7 @@ object UserExercisesProcessor {
     case UserExerciseSessionReplayStart(userId, sessionId, props)             ⇒ (userId.toString, ExerciseSessionReplayStart(sessionId, props))
     case UserExerciseSetSuggestions(userId, suggestions)                      ⇒ (userId.toString, ExerciseSetSuggestions(suggestions))
     case UserExerciseExplicitClassificationStart(userId, sessionId, exercise) ⇒ (userId.toString, ExerciseExplicitClassificationStart(sessionId, exercise))
+    case UserExerciseExplicitClassificationTag(userId, sessionId, exercise)   ⇒ (userId.toString, ExerciseExplicitClassificationTag(sessionId, exercise))
     case UserExerciseExplicitClassificationEnd(userId, sessionId)             ⇒ (userId.toString, ExerciseExplicitClassificationEnd(sessionId))
     case UserExerciseExplicitClassificationExamples(userId, sessionId)        ⇒ (userId.toString, ExerciseExplicitClassificationExamples(sessionId))
     case UserExerciseSetExerciseMetric(userId, sessionId, metric)             ⇒ (userId.toString, ExerciseExplicitClassificationExamples(sessionId))
@@ -252,6 +268,7 @@ object UserExercisesProcessor {
     case UserExerciseSessionDelete(userId, _)                  ⇒ s"${userId.hashCode() % 10}"
     case UserExerciseSessionAbandon(userId, _)                 ⇒ s"${userId.hashCode() % 10}"
     case UserExerciseExplicitClassificationStart(userId, _, _) ⇒ s"${userId.hashCode() % 10}"
+    case UserExerciseExplicitClassificationTag(userId, _, _)   ⇒ s"${userId.hashCode() % 10}"
     case UserExerciseExplicitClassificationEnd(userId, _)      ⇒ s"${userId.hashCode() % 10}"
     case UserExerciseExplicitClassificationExamples(userId, _) ⇒ s"${userId.hashCode() % 10}"
     case UserExerciseSessionReplayProcessData(userId, _, _)    ⇒ s"${userId.hashCode() % 10}"
@@ -405,7 +422,10 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
         }
 
       // explicit classification
-      case ExerciseExplicitClassificationStart(`id`, exercise) =>
+      case ExerciseExplicitClassificationStart(`id`, exercise) ⇒
+        persist(ExerciseEvt(id, ModelMetadata.user, exercise)) { evt ⇒ }
+
+      case ExerciseExplicitClassificationTag(`id`, exercise) ⇒
         persist(ExerciseEvt(id, ModelMetadata.user, exercise)) { evt ⇒ }
 
       case ExerciseExplicitClassificationEnd(`id`) ⇒

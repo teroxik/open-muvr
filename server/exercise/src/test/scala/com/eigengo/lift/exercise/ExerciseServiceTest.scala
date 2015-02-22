@@ -65,6 +65,9 @@ object ExerciseServiceTest {
           case UserExerciseExplicitClassificationStart(_, _, _) =>
             sender ! List(TestData.squat)
             TestActor.KeepRunning
+          case UserExerciseExplicitClassificationTag(_, _, _) ⇒
+            sender ! \/.right(())
+            TestActor.KeepRunning
           case UserExerciseSetSuggestions(_, _) ⇒
             sender ! \/.right(())
             TestActor.KeepRunning
@@ -198,5 +201,13 @@ class ExerciseServiceTest
     }
 
     probe.expectMsg(UserExerciseExplicitClassificationStart(TestData.userId, TestData.sessionId, TestData.squat))
+  }
+
+  it should "listen at PUT exercise/:UserIdValue/:SessionIdValue/classification endpoint" in {
+    Put(s"/exercise/${TestData.userId.id}/${TestData.sessionId.id}/classification", TestData.squat) ~> underTest ~> check {
+      response.entity.asString should be(TestData.emptyResponse)
+    }
+
+    probe.expectMsg(UserExerciseExplicitClassificationTag(TestData.userId, TestData.sessionId, TestData.squat))
   }
 }
