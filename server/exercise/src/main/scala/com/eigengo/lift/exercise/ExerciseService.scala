@@ -119,12 +119,6 @@ trait ExerciseService extends Directives with ExerciseMarshallers {
           ()
         }
       } ~
-      put {
-        handleWith { exercise: Exercise =>
-          userExercisesProcessor ! UserExerciseExplicitClassificationTag(userId, sessionId, exercise)
-          ()
-        }
-      } ~
       delete {
         complete {
           userExercisesProcessor ! UserExerciseExplicitClassificationEnd(userId, sessionId)
