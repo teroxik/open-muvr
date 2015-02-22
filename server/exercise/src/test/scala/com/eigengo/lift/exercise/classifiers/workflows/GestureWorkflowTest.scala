@@ -49,7 +49,7 @@ class GestureWorkflowTest extends AkkaSpec(ConfigFactory.load("classification.co
 
       for ((msg, index) <- msgs.zipWithIndex) {
         if (index <= msgs.length - Tap.windowSize) {
-          outProbe.expectNext(Some(NegGesture(name, Tap.threshold)))
+          outProbe.expectNext(Some(Neg(Gesture(name, Tap.threshold))))
         } else {
           outProbe.expectNext(None)
         }
@@ -80,7 +80,7 @@ class GestureWorkflowTest extends AkkaSpec(ConfigFactory.load("classification.co
         } else if (gestureWindow.contains(index)) {
           event should be(Some(Gesture(name, Tap.threshold)))
         } else {
-          event should be(Some(NegGesture(name, Tap.threshold)))
+          event should be(Some(Neg(Gesture(name, Tap.threshold))))
         }
       }
     }
