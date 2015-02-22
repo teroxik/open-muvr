@@ -429,7 +429,7 @@ public class LiftServer {
         request(LiftServerURLs.ExplicitExerciseClassificationStart(userId, sessionId), body: .Json(params: exercise.marshal()))
             .responseAsResutlt(asu(), f, const(()))
     }
-    
+        
     ///
     /// Finish saving data for the explicit exercise
     ///

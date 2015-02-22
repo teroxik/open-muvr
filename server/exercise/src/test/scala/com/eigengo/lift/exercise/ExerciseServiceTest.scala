@@ -199,4 +199,5 @@ class ExerciseServiceTest
 
     probe.expectMsg(UserExerciseExplicitClassificationStart(TestData.userId, TestData.sessionId, TestData.squat))
   }
+
 }

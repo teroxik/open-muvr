@@ -405,7 +405,7 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
         }
 
       // explicit classification
-      case ExerciseExplicitClassificationStart(`id`, exercise) =>
+      case ExerciseExplicitClassificationStart(`id`, exercise) ⇒
         persist(ExerciseEvt(id, ModelMetadata.user, exercise)) { evt ⇒ }
 
       case ExerciseExplicitClassificationEnd(`id`) ⇒
