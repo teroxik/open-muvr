@@ -4,6 +4,7 @@ import com.eigengo.lift.exercise.classifiers.ExerciseModel
 import com.eigengo.lift.exercise.classifiers.model.SMTInterface
 import com.typesafe.config.Config
 import edu.nyu.acsys.CVC4._
+import scala.async.Async._
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
@@ -108,10 +109,65 @@ class CVC4(config: Config) extends SMTInterface {
       queryMapping(query)
   }
 
-  def simplify(query: Query)(implicit ec: ExecutionContext): Future[Query] = {
-    smt.simplify(queryToExpr(query)) // TODO: implement the map back into an LDL query
+  private def exprToQuery(expr: Expr)(implicit ec: ExecutionContext): Future[Query] = {
+    if (expr.isConst && expr.getType.isBoolean) {
+      expr.toString match {
+        case "TRUE" =>
+          Future.successful(TT)
 
-    Future.successful(query)
+        case "FALSE" =>
+          Future.successful(FF)
+
+        case _ =>
+          Future.failed(new RuntimeException(s"Unrecognised boolean constant: $expr"))
+      }
+    } else if (expr.isVariable && expr.getType.isBoolean) {
+      val query = queryMapping.find(_._2.toString == expr.toString).map(_._1)
+      val prop = propMapping.find(_._2.toString == expr.toString).map(_._1)
+
+      if (query.nonEmpty) {
+        Future.successful(query.get)
+      } else if (prop.nonEmpty) {
+        Future.successful(Formula(prop.get))
+      } else {
+        Future.failed(new RuntimeException(s"No propositional mapping exists for expression $expr"))
+      }
+    } else {
+      expr.getKind match {
+        case Kind.AND =>
+          if (expr.getNumChildren < 2) {
+            Future.failed(new RuntimeException(s"And expression does not have enough arguments: $expr"))
+          } else {
+            async {
+              val query1 = await(exprToQuery(expr.getChild(0)))
+              val query2 = await(exprToQuery(expr.getChild(1)))
+              val remaining = await(Future.sequence((2 until expr.getNumChildren.toInt).map(n => exprToQuery(expr.getChild(n))))).toSeq
+
+              And(query1, query2, remaining: _*)
+            }
+          }
+
+        case Kind.OR =>
+          if (expr.getNumChildren < 2) {
+            Future.failed(new RuntimeException(s"Or expression does not have enough arguments: $expr"))
+          } else {
+            async {
+              val query1 = await(exprToQuery(expr.getChild(0)))
+              val query2 = await(exprToQuery(expr.getChild(1)))
+              val remaining = await(Future.sequence((2 until expr.getNumChildren.toInt).map(n => exprToQuery(expr.getChild(n))))).toSeq
+
+              Or(query1, query2, remaining: _*)
+            }
+          }
+
+        case _ =>
+          Future.failed(new RuntimeException(s"Unrecognised expression kind: $expr"))
+      }
+    }
+  }
+
+  def simplify(query: Query)(implicit ec: ExecutionContext): Future[Query] = {
+    exprToQuery(smt.simplify(queryToExpr(query)))
   }
 
   def satisfiable(query: Query)(implicit ec: ExecutionContext): Future[Boolean] = {
