@@ -147,10 +147,17 @@ class LiveSessionClassificationController : UITableViewController, ExerciseSessi
     // MARK: ExerciseSessionSettable implementation
     func setExerciseSession(session: ExerciseSession) {
         self.session = session
-        self.session.getClassificationExamples { $0.getOrUnit { x in
-                self.classificationExamples = x
-                self.tableView.reloadData()
-            }
+        self.session.getClassificationExamples { x in
+            let examples = x.cata(
+                { _ -> [Exercise.Exercise] in
+                    return ClassificationExamplesCache.sharedInstance.getExamplesFor(session.props)
+                }
+                , r: { (result: [Exercise.Exercise]) -> [Exercise.Exercise] in
+                    ClassificationExamplesCache.sharedInstance.addExamplesToCache(session.props, values: result)
+                    return result
+                })
+            self.classificationExamples = examples
+            self.tableView.reloadData()
         }
     }
     
