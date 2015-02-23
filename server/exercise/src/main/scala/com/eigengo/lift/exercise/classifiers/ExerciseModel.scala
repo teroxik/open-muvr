@@ -385,7 +385,8 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
             } else if (await(satisfiableQuery)) {
               // We need to unwind LDL formula further in order to determine its validity
               currentState = await(simplifiedQuery)
-              UnstableValue(currentState)
+              // We pass on next query here to "facilitate" decision making on repeated query matching
+              UnstableValue(nextQuery)
             } else {
               // `nextQuery` is unsatisfiable - so no LDL unwinding of this formula will allow it to become true
               StableValue(result = false)
