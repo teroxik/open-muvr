@@ -2,7 +2,7 @@ package com.eigengo.lift.spark.api
 
 import akka.actor.ActorSystem
 import com.typesafe.config.Config
-import org.apache.log4j.Logger
+import org.slf4j.{LoggerFactory, Logger}
 import spray.client.pipelining._
 import spray.http.{Uri, HttpResponse, HttpRequest}
 import spray.http.StatusCodes._
@@ -21,7 +21,7 @@ trait HttpClient {
 
   private def pipeline: HttpRequest => Future[HttpResponse] = sendReceive
 
-  private val logger = Logger.getLogger(classOf[HttpClient])
+  private val logger = LoggerFactory.getLogger(classOf[HttpClient])
 
   /**
    * Creates a Http request to given uri

@@ -2,8 +2,8 @@ package com.eigengo.lift.spark
 
 import com.eigengo.lift.spark.jobs.Batch
 import com.typesafe.config.Config
-import org.apache.log4j.Logger
 import org.apache.spark.{SparkConf, SparkContext}
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.Future
 
@@ -25,7 +25,7 @@ trait Driver {
    */
   def master: String
 
-  private val logger = Logger.getLogger(classOf[Driver])
+  private val logger = LoggerFactory.getLogger(classOf[Driver])
 
   private val sc = sparkContext("Spark Driver",  (c, conf) => {
     conf.set("spark.cassandra.connection.host", c.getString("cassandra.host"))
