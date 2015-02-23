@@ -17,6 +17,17 @@ object RandomExerciseModel {
       "arms" → List("Biceps curl", "Triceps press"),
       "chest" → List("Chest press", "Butterfly", "Cable cross-over")
     )
+
+  implicit val prover = new SMTInterface {
+    // Random model performs no query simplification
+    def simplify(query: Query)(implicit ec: ExecutionContext) = Future(query)
+
+    // Random model always claims that query is satisfiable
+    def satisfiable(query: Query)(implicit ec: ExecutionContext) = Future(true)
+
+    // Random model always claims that query is valid
+    def valid(query: Query)(implicit ec: ExecutionContext) = Future(true)
+  }
 }
 
 /**
@@ -24,12 +35,10 @@ object RandomExerciseModel {
  * the listening actor).
  */
 class RandomExerciseModel(sessionProps: SessionProperties)
-  extends ExerciseModel("random", sessionProps, for (sensor <- Sensor.sourceLocations; exercise <- RandomExerciseModel.exercises.values.flatten) yield Formula(Assert(sensor, Gesture(exercise, 0.80))))
-  with SMTInterface
+  extends ExerciseModel("random", sessionProps, for (sensor <- Sensor.sourceLocations; exercise <- RandomExerciseModel.exercises.values.flatten) yield Formula(Assert(Gesture(exercise, 0.80), sensor)))(RandomExerciseModel.prover)
   with Actor
   with ActorLogging {
 
-  import context.dispatcher
   import RandomExerciseModel._
 
   private val metadata = ModelMetadata(2)
@@ -55,27 +64,32 @@ class RandomExerciseModel(sessionProps: SessionProperties)
         BindToSensors(sn.toMap.map { case (location, _) => if (location == sensor) (location, classification) else (location, Set.empty[Fact]) }.toMap, sn)
       }
 
-  // Random model performs no query simplification
-  def simplify(query: Query)(implicit ec: ExecutionContext) = Future(query)
-
-  // Random model always claims that query is satisfiable
-  def satisfiable(query: Query)(implicit ec: ExecutionContext) = Future(true)
-
   // Random model evaluator always returns true!
   def evaluateQuery(query: Query)(current: BindToSensors, lastState: Boolean) =
     StableValue(result = true)
 
-  def makeDecision(query: Query, value: QueryValue, result: Boolean) =
-    if (result) {
-      val exercise = (query: @unchecked) match {
-        case Formula(Assert(_, Gesture(nm, _))) =>
-          Exercise(nm, None, None)
-      }
+  // Random exercises are returned for 2% of received sensor values
+  def makeDecision(query: Query) =
+    Flow[QueryValue]
+      .map {
+        case StableValue(true) =>
+          val exercise = (query: @unchecked) match {
+            case Formula(Assert(Gesture(nm, _), _)) =>
+              Exercise(nm, None, None)
+          }
 
-      FullyClassifiedExercise(metadata, 1.0, exercise)
-    } else {
-      UnclassifiedExercise(metadata)
-    }
+          FullyClassifiedExercise(metadata, 1.0, exercise)
+
+        case _ =>
+          UnclassifiedExercise(metadata)
+      }
+      .map { exercise =>
+        if (Random.nextInt(50) == 1) {
+          Some(exercise)
+        } else {
+          None
+        }
+      }
 
   /**
    * We use `aroundReceive` here to print out a summary `SensorNet` message.
