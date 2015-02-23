@@ -205,12 +205,17 @@ class LiveSessionClassificationController : UITableViewController, ExerciseSessi
     
     // MARK: LiveSessionClassificationTagDelegate code
     
+    private func sendClassification(actualExercise: Exercise.Exercise, count: Int) {
+        if count > 0 {
+            session.startExplicitClassification(actualExercise) { _ in self.sendClassification(actualExercise, count: count - 1) }
+        } else {
+            session.endExplicitClassification()
+        }
+    }
+    
     func doneTagging(exercise: Exercise.Exercise, intensity: Exercise.ExerciseIntensityKey, repetition: Int) {
         let actualExercise = Exercise.Exercise(name: exercise.name, intensity: intensity, metric: nil)
-        for i in 0..<repetition {
-            session.startExplicitClassification(actualExercise)
-        }
-        session.endExplicitClassification()
+        sendClassification(actualExercise, count: repetition)
         
         isTagging = false
         tagView.hidden = true

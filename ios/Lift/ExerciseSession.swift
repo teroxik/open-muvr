@@ -46,6 +46,13 @@ class ExerciseSession : NSObject {
     }
     
     ///
+    /// Start explicit classification of the given exercise
+    ///
+    func startExplicitClassification(exercise: Exercise.Exercise, f: Result<Void> -> Void) -> Void {
+        LiftServer.sharedInstance.exerciseSessionStartExplicitClassification(CurrentLiftUser.userId!, sessionId: id, exercise: exercise, f: f)
+    }
+    
+    ///
     /// End explicit classification
     ///
     func endExplicitClassification() {

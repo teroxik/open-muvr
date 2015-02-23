@@ -1,5 +1,6 @@
 package com.eigengo.lift.exercise
 
+import java.io.BufferedWriter
 import java.util.{Calendar, Date}
 
 import akka.actor.{ActorRef, ActorLogging, Props}
@@ -36,7 +37,13 @@ object UserExercisesSessions {
       copy(exercises = newExercises)
     }
 
-    def withNewExercise(modelMetadata: ModelMetadata, exercise: Exercise): ExerciseSet = copy(exercises :+ exercise)
+    def withNewExercise(modelMetadata: ModelMetadata, exercise: Exercise): ExerciseSet = {
+      val exercisesReversed = exercises.reverse
+      exercisesReversed.headOption.flatMap {
+        case Exercise(name, None, _) if name == exercise.name ⇒ Some(ExerciseSet((exercise :: exercisesReversed.drop(1)).reverse))
+        case _ ⇒ None
+      }.getOrElse(ExerciseSet(exercises :+ exercise))
+    }
   }
   
   object ExerciseSet {
