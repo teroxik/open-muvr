@@ -1,5 +1,7 @@
 package com.eigengo.lift.spark
 
+import java.util.concurrent.TimeUnit
+
 import akka.actor.ActorSystem
 import com.eigengo.lift.spark.JobManagerProtocol.BatchJobSubmit
 import com.typesafe.config.ConfigFactory
@@ -8,15 +10,11 @@ import org.apache.spark.Logging
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
+/**
+ * Main backend Spark application
+ * Runs Spark job manager and driver which on demand submits jobs to configured cluster
+ */
 object Spark extends App with Logging {
-
-  val log4jInitialized = Logger.getRootLogger.getAllAppenders.hasMoreElements
-  if (!log4jInitialized) {
-    logInfo("Setting log level to [WARN] for streaming example." +
-      " To override add a custom log4j.properties to the classpath.")
-
-    Logger.getRootLogger.setLevel(Level.WARN)
-  }
 
   val system = ActorSystem("SparkJobManager")
 
@@ -25,5 +23,15 @@ object Spark extends App with Logging {
 
   val manager = system.actorOf(JobManager.props(master, config))
 
-  system.scheduler.schedule(0 seconds, 180 seconds)(manager ! BatchJobSubmit("Suggestions"))(system.dispatcher)
+  val interval = FiniteDuration(config.getDuration("jobs.suggestions.interval", TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS)
+
+  //Start suggestions job. The job is re-run every jobs.suggestions.interval milliseconds.
+  system.scheduler.schedule(
+    180 seconds,
+    FiniteDuration(
+      config.getDuration(
+        "jobs.suggestions.interval",
+        TimeUnit.MILLISECONDS),
+        TimeUnit.MILLISECONDS
+    ))(manager ! BatchJobSubmit("Suggestions"))(system.dispatcher)
 }

@@ -6,12 +6,23 @@ import org.apache.log4j.Logger
 import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.concurrent.Future
-import scala.reflect.ClassTag
 
+/**
+ * Driver submits jobs to Spack Cluster
+ * Maintains connection to Cluster as SparkContext and provides that managed context to requesting jobs
+ */
 trait Driver {
 
+  /**
+   * Configuration
+   * @return configuration
+   */
   def config: Config
 
+  /**
+   * Master url. Supports any Spark supported url.
+   * @return url
+   */
   def master: String
 
   private val logger = Logger.getLogger(classOf[Driver])
@@ -32,6 +43,14 @@ trait Driver {
     sc
   }
 
+  /**
+   * Submits a job to Spark Cluster
+   * @param job job to be submitted
+   * @param jobParam parameters passed to the job
+   * @tparam P job parameter type
+   * @tparam R job return type
+   * @return Left(String) in case of failure, Right(R) otherwise
+   */
   def submit[P, R](job: Batch[P, R], jobParam: P): Future[Either[String, R]] = {
     //val sc = sparkContext(job.name, job.additionalConfig)
 
@@ -43,6 +62,14 @@ trait Driver {
     result
   }
 
+  /**
+   * Submits anonymous job to Spack Cluster
+   * @param name name of the job
+   * @param job function specifying the job
+   * @param additionalConfig additional configuration the job may want to set
+   * @tparam R job return type
+   * @return Left(String) in case of failure, Right(R) otherwise
+   */
   def submit[R](
       name: String,
       job: SparkContext => Future[Either[String, R]],
@@ -58,5 +85,11 @@ trait Driver {
     result
   }
 
+  /**
+   * Submits a streaming job to cluster
+   * @param job streaming job
+   * @tparam T type of streaming job parameter
+   * @return not implemented exception
+   */
   def submit[T](job: Stream[T]): Either[String, T] = ???
 }
