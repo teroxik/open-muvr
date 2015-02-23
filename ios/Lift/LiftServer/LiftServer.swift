@@ -89,7 +89,7 @@ internal extension AvailabilityState {
 extension Request {
     typealias AvailabilityStateUpdate = (AvailabilityState, AvailabilityState -> Void)
     
-    func responseAsResutlt<A, U>(asu: AvailabilityStateUpdate, f: Result<A> -> U, completionHandler: (JSON) -> A) -> Void {
+    func responseAsResult<A, U>(asu: AvailabilityStateUpdate, f: Result<A> -> U, completionHandler: (JSON) -> A) -> Void {
         
         func tryCompleteFromCache(error: NSError, request: NSURLRequest, f: Result<A> -> U, completionHandler: (JSON) -> A) {
             if let method = request.HTTPMethod {
@@ -308,7 +308,7 @@ public class LiftServer {
             tokenBytes.append(NSNumber(unsignedChar: bytes.advancedBy(i).memory))
         }
         request(LiftServerURLs.UserRegisterDevice(userId), body: .Json(params: [ "deviceToken": tokenBytes ]))
-            .responseAsResutlt(asu(), const(()), const(()))
+            .responseAsResult(asu(), const(()), const(()))
         
     }
     
@@ -317,7 +317,7 @@ public class LiftServer {
     ///
     func userLogin(email: String, password: String, f: Result<User> -> Void) -> Void {
         request(LiftServerURLs.UserLogin(), body: .Json(params: [ "email": email, "password": password ]))
-            .responseAsResutlt(asu(), f) { json -> User in
+            .responseAsResult(asu(), f) { json -> User in
                 let userId = NSUUID(UUIDString: json["id"].stringValue)
                 return User(id: userId!)
             }
@@ -328,7 +328,7 @@ public class LiftServer {
     ///
     func userRegister(email: String, password: String, f: Result<User> -> Void) -> Void {
         request(LiftServerURLs.UserRegister(), body: .Json(params: [ "email": email, "password": password ]))
-            .responseAsResutlt(asu(), f) { json -> User in
+            .responseAsResult(asu(), f) { json -> User in
                 let userId = NSUUID(UUIDString: json["id"].stringValue)
                 return User(id: userId!)
             }
@@ -340,7 +340,7 @@ public class LiftServer {
     ///
     func userGetPublicProfile(userId: NSUUID, f: Result<User.PublicProfile?> -> Void) -> Void {
         request(LiftServerURLs.UserGetPublicProfile(userId))
-            .responseAsResutlt(asu(), f, User.PublicProfile.unmarshal)
+            .responseAsResult(asu(), f, User.PublicProfile.unmarshal)
     }
     
     ///
@@ -348,7 +348,7 @@ public class LiftServer {
     ///
     func userSetPublicProfile(userId: NSUUID, profile: User.PublicProfile, f: Result<Void> -> Void) -> Void {
         request(LiftServerURLs.UserSetPublicProfile(userId), body: .Json(params: profile.marshal()))
-            .responseAsResutlt(asu(), f, const())
+            .responseAsResult(asu(), f, const())
     }
     
     ///
@@ -356,7 +356,7 @@ public class LiftServer {
     ///
     func userCheckAccount(userId: NSUUID, f: Result<Void> -> Void) -> Void {
         request(LiftServerURLs.UserCheckAccount(userId))
-            .responseAsResutlt(asu(), f, const(()))
+            .responseAsResult(asu(), f, const(()))
     }
     
     func userGetProfileImage(userId: NSUUID, f: Result<NSData> -> Void) -> Void {
@@ -384,7 +384,7 @@ public class LiftServer {
     
     func userSetProfileImage(userId: NSUUID, image: NSData, f: Result<Void> -> Void) -> Void {
         request(LiftServerURLs.UserSetProfileImage(userId), body: .Data(data: image))
-            .responseAsResutlt(asu(), f, const(()))
+            .responseAsResult(asu(), f, const(()))
     }
     
     // MARK: - Classifiers
@@ -394,7 +394,7 @@ public class LiftServer {
     ///
     func exerciseGetMuscleGroups(f: Result<[Exercise.MuscleGroup]> -> Void) -> Void {
         request(LiftServerURLs.ExerciseGetMuscleGroups())
-            .responseAsResutlt(asu(), f) { json -> [Exercise.MuscleGroup] in
+            .responseAsResult(asu(), f) { json -> [Exercise.MuscleGroup] in
                 return json.arrayValue.map(Exercise.MuscleGroup.unmarshal)
             }
     }
@@ -406,7 +406,7 @@ public class LiftServer {
     ///
     func exerciseSessionStart(userId: NSUUID, props: Exercise.SessionProps, f: Result<NSUUID> -> Void) -> Void {
         request(LiftServerURLs.ExerciseSessionStart(userId), body: .Json(params: props.marshal()))
-            .responseAsResutlt(asu(), f) { json in return NSUUID(UUIDString: json["id"].stringValue)! }
+            .responseAsResult(asu(), f) { json in return NSUUID(UUIDString: json["id"].stringValue)! }
     }
 
     ///
@@ -414,12 +414,12 @@ public class LiftServer {
     ///
     func exerciseSessionSubmitData(userId: NSUUID, sessionId: NSUUID, data: NSData, f: Result<Void> -> Void) -> Void {
         request(LiftServerURLs.ExerciseSessionSubmitData(userId, sessionId), body: .Data(data: data))
-            .responseAsResutlt(asu(), f, const(()))
+            .responseAsResult(asu(), f, const(()))
     }
     
     func exerciseSessionGetClassificationExamples(userId: NSUUID, sessionId: NSUUID, f: Result<[Exercise.Exercise]> -> Void) -> Void {
         request(LiftServerURLs.ExerciseSessionGetClassificationExamples(userId, sessionId))
-            .responseAsResutlt(asu(), f) { json in json.arrayValue.map(Exercise.Exercise.unmarshal) }
+            .responseAsResult(asu(), f) { json in json.arrayValue.map(Exercise.Exercise.unmarshal) }
     }
 
     ///
@@ -427,7 +427,7 @@ public class LiftServer {
     ///
     func exerciseSessionStartExplicitClassification(userId: NSUUID, sessionId: NSUUID, exercise: Exercise.Exercise, f: Result<Void> -> Void) -> Void {
         request(LiftServerURLs.ExplicitExerciseClassificationStart(userId, sessionId), body: .Json(params: exercise.marshal()))
-            .responseAsResutlt(asu(), f, const(()))
+            .responseAsResult(asu(), f, const(()))
     }
         
     ///
@@ -435,7 +435,7 @@ public class LiftServer {
     ///
     func exerciseSessionEndExplicitClassification(userId: NSUUID, sessionId: NSUUID, f: Result<Void> -> Void) -> Void {
         request(LiftServerURLs.ExplicitExerciseClassificationStop(userId, sessionId))
-            .responseAsResutlt(asu(), f, const(()))
+            .responseAsResult(asu(), f, const(()))
     }
     
     ///
@@ -443,7 +443,7 @@ public class LiftServer {
     ///
     func exerciseSessionEnd(userId: NSUUID, sessionId: NSUUID, f: Result<Void> -> Void) -> Void {
         request(LiftServerURLs.ExerciseSessionEnd(userId, sessionId))
-            .responseAsResutlt(asu(), f, const(()))
+            .responseAsResult(asu(), f, const(()))
     }
     
     ///
@@ -451,7 +451,7 @@ public class LiftServer {
     ///
     func exerciseGetExerciseSessionsSummary(userId: NSUUID, date: NSDate, f: Result<[Exercise.SessionSummary]> -> Void) -> Void {
         request(LiftServerURLs.ExerciseGetExerciseSessionsSummary(userId, date))
-            .responseAsResutlt(asu(), f) { json -> [Exercise.SessionSummary] in
+            .responseAsResult(asu(), f) { json -> [Exercise.SessionSummary] in
                 return json.arrayValue.map(Exercise.SessionSummary.unmarshal)
             }
     }
@@ -461,7 +461,7 @@ public class LiftServer {
     ///
     func exerciseGetExerciseSessionsDates(userId: NSUUID, f: Result<[Exercise.SessionDate]> -> Void) -> Void {
         request(LiftServerURLs.ExerciseGetExerciseSessionsDates(userId))
-            .responseAsResutlt(asu(), f) { json in return json.arrayValue.map(Exercise.SessionDate.unmarshal) }
+            .responseAsResult(asu(), f) { json in return json.arrayValue.map(Exercise.SessionDate.unmarshal) }
     }
     
     ///
@@ -470,7 +470,7 @@ public class LiftServer {
     ///
     func exerciseAbandonExerciseSession(userId: NSUUID, sessionId: NSUUID, f: Result<Void> -> Void) -> Void {
         request(LiftServerURLs.ExerciseSessionAbandon(userId, sessionId))
-            .responseAsResutlt(asu(), f, const(()))
+            .responseAsResult(asu(), f, const(()))
     }
     
     ///
@@ -478,7 +478,7 @@ public class LiftServer {
     ///
     func exerciseExerciseSessionReplayStart(userId: NSUUID, sessionId: NSUUID, props: Exercise.SessionProps, f: Result<NSUUID> -> Void) -> Void {
         request(LiftServerURLs.ExerciseSessionReplayStart(userId, sessionId), body: .Json(params: props.marshal()))
-            .responseAsResutlt(asu(), f) { json in return NSUUID(UUIDString: json["id"].stringValue)! }
+            .responseAsResult(asu(), f) { json in return NSUUID(UUIDString: json["id"].stringValue)! }
     }
     
     ///
@@ -487,7 +487,7 @@ public class LiftServer {
     ///
     func exerciseExerciseSessionReplaySubmitData(userId: NSUUID, sessionId: NSUUID, data: NSData, f: Result<Void> -> Void) -> Void {
         request(LiftServerURLs.ExerciseSessionReplayData(userId, sessionId), body: .Data(data: data))
-            .responseAsResutlt(asu(), f, const(()))
+            .responseAsResult(asu(), f, const(()))
     }
     
     ///
@@ -495,11 +495,11 @@ public class LiftServer {
     ///
     func exerciseGetExerciseSession(userId: NSUUID, sessionId: NSUUID, f: Result<Exercise.ExerciseSession> -> Void) -> Void {
         request(LiftServerURLs.ExerciseGetExerciseSession(userId, sessionId))
-            .responseAsResutlt(asu(), f, Exercise.ExerciseSession.unmarshal)
+            .responseAsResult(asu(), f, Exercise.ExerciseSession.unmarshal)
     }
     
     func exerciseDeleteExerciseSession(userId: NSUUID, sessionId: NSUUID, f: Result<Void> -> Void) -> Void {
         request(LiftServerURLs.ExerciseDeleteExerciseSession(userId, sessionId))
-            .responseAsResutlt(asu(), f, const(()))
+            .responseAsResult(asu(), f, const(()))
     }
 }
