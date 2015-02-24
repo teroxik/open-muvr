@@ -1,6 +1,7 @@
 package com.eigengo.lift.exercise
 
 import java.text.SimpleDateFormat
+import java.util.Date
 
 import com.eigengo.lift.common.{CommonMarshallers, CommonPathDirectives}
 import org.json4s.JsonAST._
@@ -18,40 +19,55 @@ import scala.util.Try
  */
 trait ExerciseMarshallers extends MarshallingDirectives with PathDirectives with CommonPathDirectives with CommonMarshallers {
 
+  def getDate(map: Map[String, JValue], key: String): Option[Date] = {
+    map.get(key).flatMap {
+      case JString(dateString) ⇒ Try {
+        json4sFormats.dateFormat.parse(dateString)
+      }.getOrElse(None)
+      case _ ⇒ None
+    }
+  }
+
+  def getStringArray(map: Map[String, JValue], key: String): Option[List[String]] = {
+    map.get(key).flatMap {
+      case JArray(muscles) ⇒ Some(muscles.flatMap {
+        case JString(muscle) ⇒ Some(muscle)
+        case _ ⇒ None})
+      case _ ⇒ None
+    }
+  }
+
+  def getDouble(map: Map[String, JValue], key: String): Option[Double] = {
+    map.get(key).flatMap {
+      case JDouble(num) ⇒ Some(num)
+      case _ ⇒ None
+    }
+  }
+
+  def getRequestedClassification(map: Map[String, JValue], key: String): Option[RequestedClassification] = {
+    map.get(key).flatMap {
+      case JString("RandomClassification") ⇒ Some(RandomClassification)
+      case JString("ExplicitClassification") ⇒ Some(ExplicitClassification)
+      case _ ⇒ None
+    }
+  }
+
   implicit object SessionPropertiesUnmarshaller extends FromRequestUnmarshaller[SessionProperties] {
     def apply(request: HttpRequest): Deserialized[SessionProperties] = {
-      JsonParser.parse(request.entity.asString) match {
-        case JObject(list) ⇒
-          val values = list.toMap
-          (for (
-            startDateJson <- values.get("startDate");
-            startDate <- startDateJson match {
-              case JString(dateString) ⇒ Try { json4sFormats.dateFormat.parse(dateString) }.getOrElse(None)
-              case _ ⇒ None
-            };
-            muscleGroupKeys <-
-              values.get("muscleGroupKeys") match {
-                case Some(JArray(list)) ⇒ Some(list.flatMap {
-                    case JString(muscle) ⇒ Some(muscle)
-                    case _ ⇒ None})
-                case _ ⇒ None
-              };
-            intendedIntensity <-
-              values.get("intendedIntensity") match {
-                case Some(JDouble(num)) ⇒ Some(num)
-                case _ ⇒ None
-              };
-            classification <-
-              values.get("classification") match {
-                case Some(JString("RandomClassification")) ⇒ Some(RandomClassification)
-                case Some(JString("ExplicitClassification")) ⇒ Some(ExplicitClassification)
-                case _ ⇒ None
-            }
-          ) yield Right(SessionProperties(startDate, muscleGroupKeys, intendedIntensity, classification)))
-          .getOrElse(Left(MalformedContent("Could not deserialize SessionProperties.")))
 
-        case _ ⇒ Left(MalformedContent("Could not deserialize SessionProperties."))
+      def getSessionProperties(values: Map[String, JValue]): Option[SessionProperties] = {
+        (for (
+          startDate <- getDate(values, "startDate");
+          muscleGroupKeys <- getStringArray(values, "muscleGroupKeys");
+          intendedIntensity <- getDouble(values, "intendedIntensity");
+          classification <- getRequestedClassification(values, "classification")
+        ) yield Some(SessionProperties(startDate, muscleGroupKeys, intendedIntensity, classification))).getOrElse(None)
       }
+
+      (JsonParser.parse(request.entity.asString) match {
+        case JObject(list) ⇒ getSessionProperties(list.toMap)
+        case _ ⇒ None
+      }).fold[Deserialized[SessionProperties]](Left(MalformedContent("Could not deserialize SessionProperties."))) { Right(_) }
     }
   }
 

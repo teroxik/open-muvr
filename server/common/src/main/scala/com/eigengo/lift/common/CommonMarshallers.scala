@@ -3,8 +3,8 @@ package com.eigengo.lift.common
 import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
 
-import org.json4s.JsonAST.{JNull, JString}
-import org.json4s.{Serializer, CustomSerializer, DefaultFormats, Formats}
+import org.json4s.JsonAST._
+import org.json4s.{CustomSerializer, DefaultFormats, Formats}
 import spray.http.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
 import spray.httpx.Json4sSupport
 import spray.httpx.marshalling.{ToResponseMarshallingContext, ToResponseMarshaller}

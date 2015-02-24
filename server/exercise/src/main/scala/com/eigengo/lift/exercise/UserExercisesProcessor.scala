@@ -413,6 +413,7 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
         self ! NoExercise(ModelMetadata.user)
 
       case ExerciseExplicitClassificationExamples(`id`) ⇒
+        // Should be get from statistics view?
         classifier.foreach(_.tell(ClassificationExamples(sessionProps), sender()))
 
       // explicit metrics
