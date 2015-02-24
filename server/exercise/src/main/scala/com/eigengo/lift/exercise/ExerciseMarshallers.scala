@@ -5,9 +5,9 @@ import java.util.Date
 
 import com.eigengo.lift.common.{CommonMarshallers, CommonPathDirectives}
 import org.json4s.JsonAST._
-import org.json4s.native.JsonParser
+import org.json4s.native.{JsonMethods, JsonParser}
 import spray.http._
-import spray.httpx.marshalling.{Marshaller, ToResponseMarshaller, ToResponseMarshallingContext}
+import spray.httpx.marshalling.{ToResponseMarshaller, ToResponseMarshallingContext}
 import spray.httpx.unmarshalling._
 import spray.routing._
 import spray.routing.directives.{MarshallingDirectives, PathDirectives}
@@ -71,22 +71,24 @@ trait ExerciseMarshallers extends MarshallingDirectives with PathDirectives with
     }
   }
 
-  implicit object RequestedClassificationUnmarshaller extends FromStringOptionDeserializer[RequestedClassification] {
-    def apply(value: Option[String]): Deserialized[RequestedClassification] = value match {
-      case Some("RandomClassification") ⇒ Right(RandomClassification)
-      case Some("ExplicitClassification") ⇒ Right(ExplicitClassification)
-      case _ ⇒ Left(MalformedContent(s"Could not deserialize '$value' as RequestedClassification", None))
+  implicit object SessionPropertiesToResponseMarshaller extends ToResponseMarshaller[SessionProperties] {
+    def apply(value: SessionProperties, ctx: ToResponseMarshallingContext): Unit = {
+      def getClassificationString(classification: RequestedClassification): String = {
+        classification match {
+          case RandomClassification ⇒ "RandomClassification"
+          case ExplicitClassification | _ ⇒ "ExplicitClassification"
+        }
+      }
+
+      val jObject = JObject(
+          ("startDate", JString(json4sFormats.dateFormat.format(value.startDate))),
+          ("muscleGroupKeys", JArray(value.muscleGroupKeys.map { s ⇒ JString(s) }.toList)),
+          ("intendedIntensity", JDouble(value.intendedIntensity)),
+          ("classification", JString(getClassificationString(value.classification))))
+      val json = JsonMethods.pretty(JsonMethods.render(jObject))
+      ctx.marshalTo(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, json)))
     }
   }
-
-  implicit val RequestedClassificationMarshaller =
-    Marshaller.of[RequestedClassification](ContentTypes.`application/json`) {
-      (value, contentType, context) ⇒
-        value match {
-          case RandomClassification ⇒ context.marshalTo(HttpEntity(contentType, "RandomClassification"))
-          case ExplicitClassification ⇒ context.marshalTo(HttpEntity(contentType, "ExplicitClassification"))
-        }
-    }
 
   implicit object MultiPacketFromRequestUnmarshaller extends FromRequestUnmarshaller[MultiPacket] {
     override def apply(request: HttpRequest): Deserialized[MultiPacket] = {
