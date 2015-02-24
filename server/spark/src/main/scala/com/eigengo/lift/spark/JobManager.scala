@@ -26,13 +26,13 @@ object JobManagerProtocol {
    * Submit a Streaming job
    * @param job job name
    */
-  case class StreamJobSubmit(job: String) extends JobManagerProtocol
+  case class StreamJobSubmit(job: Symbol) extends JobManagerProtocol
 
   /**
    * Submit a Batch job
    * @param job job name
    */
-  case class BatchJobSubmit(job: String) extends JobManagerProtocol
+  case class BatchJobSubmit(job: Symbol) extends JobManagerProtocol
 
   /**
    * Submit a Batch job using a function
@@ -80,14 +80,12 @@ class JobManager(
       case BatchJobSubmitFunction(name, func) =>
         submit(name, func)
 
-      case BatchJobSubmit(x) => x match {
-        case "Suggestions" =>
+      case BatchJobSubmit('Suggestions) =>
           submit(Job[TestSuggestionsJob], ()).pipeTo(self)
-      }
 
-      case x @ _ => log.warning(s"Not a job $x")
+      case x => log.warning(s"Not a job $x")
     }
 
-    case x @ _ => log.warning(s"Unknown request $x")
+    case x => log.warning(s"Unknown request $x")
   }
 }

@@ -15,13 +15,13 @@ import scala.concurrent.Future
 trait HttpClient {
 
   //TODO: External
-  private implicit def actorSystem = ActorSystem("spray-client")
+  private implicit lazy val actorSystem = ActorSystem("spray-client")
 
-  private implicit def ec = actorSystem.dispatcher
+  private implicit lazy val ec = actorSystem.dispatcher
 
-  private def pipeline: HttpRequest => Future[HttpResponse] = sendReceive
+  private lazy val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
 
-  private val logger = LoggerFactory.getLogger(classOf[HttpClient])
+  private lazy val logger = LoggerFactory.getLogger(classOf[HttpClient])
 
   /**
    * Creates a Http request to given uri
@@ -42,7 +42,7 @@ trait HttpClient {
         logger.info(s"Request succeeded: $r")
         Right(s"Request succeeded")
       }
-      case s@_ => {
+      case s => {
         logger.warn(s"Request failed: $r")
         Left(s"Request failed with status $s")
       }

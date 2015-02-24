@@ -23,15 +23,9 @@ object Spark extends App with Logging {
 
   val manager = system.actorOf(JobManager.props(master, config))
 
-  val interval = FiniteDuration(config.getDuration("jobs.suggestions.interval", TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS)
-
   //Start suggestions job. The job is re-run every jobs.suggestions.interval milliseconds.
   system.scheduler.schedule(
     180 seconds,
-    FiniteDuration(
-      config.getDuration(
-        "jobs.suggestions.interval",
-        TimeUnit.MILLISECONDS),
-        TimeUnit.MILLISECONDS
-    ))(manager ! BatchJobSubmit("Suggestions"))(system.dispatcher)
+    config.getDuration("jobs.suggestions.interval", TimeUnit.MILLISECONDS).milliseconds
+    )(manager ! BatchJobSubmit('Suggestions))(system.dispatcher)
 }

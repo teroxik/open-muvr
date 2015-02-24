@@ -9,6 +9,8 @@ import spray.http.ContentTypes._
 import spray.http.HttpEntity
 import spray.httpx.marshalling.{MarshallingContext, Marshaller}
 
+import scala.language.implicitConversions
+
 /**
  * Spark HTTP requests marshalling
  */
@@ -26,7 +28,7 @@ trait ExerciseMarshallers {
 
       val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
 
-      implicit def suggestionSource: SuggestionSource => JValue = s => s match {
+      implicit def suggestionSource(s: SuggestionSource): JValue = s match {
         case Trainer(n) => JObject(JField("notes", JString(n)))
         case Programme => JString(Programme.toString.toLowerCase)
         case History => JString(History.toString.toLowerCase)

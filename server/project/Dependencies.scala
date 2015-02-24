@@ -108,6 +108,13 @@ object Dependencies {
       .exclude("commons-logging", "commons-logging")
   }
 
+  object slf4j {
+    val version = "1.6.1"
+
+    val slf4j_simple     = "org.slf4j"              % "slf4j-simple" % version
+    val slf4j_api        = "org.slf4j"              % "slf4j-api"    % version
+  }
+
   val typesafeConfig   = "com.typesafe"           % "config"        % "1.2.1"
 
   val scodec_bits      = "org.typelevel"          %% "scodec-bits"  % "1.0.4"
@@ -120,8 +127,6 @@ object Dependencies {
 
   // Apple push notifications
   val apns             = "com.notnoop.apns"       % "apns"         % "0.1.6"
-  val slf4j_simple     = "org.slf4j"              % "slf4j-simple" % "1.6.1"
-  val slf4j_api        = "org.slf4j"              % "slf4j-api"    % "1.6.1"
  
   // Datastax Cassandra Client
   val cassandra_driver = "com.datastax.cassandra" % "cassandra-driver-core" % "2.1.1" exclude("io.netty", "netty")

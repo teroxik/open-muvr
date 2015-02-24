@@ -63,7 +63,7 @@ class TestSuggestionsJob() extends Batch[Unit, Unit] with HttpClient with Exerci
     //TODO: Refactor error handling
     result match {
       case Success(f) => {
-        Future.sequence(f.toList).map{a =>
+        Future.sequence(f.toList).map{ a =>
           val failed = a.filter(_.isLeft)
           if(failed.isEmpty) Right((): Unit) else Left(failed.mkString(","))
         }
