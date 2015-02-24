@@ -68,18 +68,28 @@ class RandomExerciseModel(sessionProps: SessionProperties)
   def evaluateQuery(query: Query)(current: BindToSensors, lastState: Boolean) =
     StableValue(result = true)
 
-  def makeDecision(query: Query, value: QueryValue) = value match {
-    case StableValue(true) =>
-      val exercise = (query: @unchecked) match {
-        case Formula(Assert(Gesture(nm, _), _)) =>
-          Exercise(nm, None, None)
+  // Random exercises are returned for 2% of received sensor values
+  def makeDecision(query: Query) =
+    Flow[QueryValue]
+      .map {
+        case StableValue(true) =>
+          val exercise = (query: @unchecked) match {
+            case Formula(Assert(Gesture(nm, _), _)) =>
+              Exercise(nm, None, None)
+          }
+
+          FullyClassifiedExercise(metadata, 1.0, exercise)
+
+        case _ =>
+          UnclassifiedExercise(metadata)
       }
-
-      FullyClassifiedExercise(metadata, 1.0, exercise)
-
-    case _ =>
-      UnclassifiedExercise(metadata)
-  }
+      .map { exercise =>
+        if (Random.nextInt(50) == 1) {
+          Some(exercise)
+        } else {
+          None
+        }
+      }
 
   /**
    * We use `aroundReceive` here to print out a summary `SensorNet` message.
