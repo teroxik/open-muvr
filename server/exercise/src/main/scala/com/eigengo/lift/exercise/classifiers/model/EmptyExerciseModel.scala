@@ -55,13 +55,16 @@ class EmptyExerciseModel(sessionProps: SessionProperties)
     StableValue(result = true)
 
   /**
-   * Defined by implementing subclasses. Determines the message sent back to the UserExercisesProcessor.
+   * Defined by implementing subclasses. Configurable flow that determines the (optional) message sent back to the
+   * UserExercisesProcessor.
    *
    * @param query  query that we have been requested to watch
-   * @param value  current model evaluated value for this query
    */
-  override protected def makeDecision(query: Query, value: QueryValue): ClassifiedExercise =
-    UnclassifiedExercise(metadata)
+  protected def makeDecision(query: Query): Flow[QueryValue, Option[ClassifiedExercise]] =
+    Flow[QueryValue]
+      .map { _ ⇒
+      None
+    }
 
   /**
    * Defined by implementing subclasses. Configurable flow defined by implementing subclasses
