@@ -1,8 +1,9 @@
 package com.eigengo.lift.exercise.classifiers
 
 import akka.actor.{Props, ActorRef, Actor}
-import com.eigengo.lift.exercise.classifiers.model.{EmptyExerciseModel, RandomExerciseModel}
+import com.eigengo.lift.exercise.classifiers.model.RandomExerciseModel
 import com.eigengo.lift.exercise.{SessionProperties, UserExercisesClassifier}
+import com.eigengo.lift.exercise.{ExplicitClassification, RandomClassification }
 
 trait ExerciseModelChecking {
   this: Actor =>
@@ -11,9 +12,10 @@ trait ExerciseModelChecking {
 
   def registerModelChecking(sessionProps: SessionProperties): Unit = {
     classifier.foreach(context.stop)
-    // TODO: replacing random model with empty model for data collection
-    //classifier = Some(context.actorOf(UserExercisesClassifier.props(sessionProps, Props(new RandomExerciseModel(sessionProps)))))
-    classifier = Some(context.actorOf(UserExercisesClassifier.props(sessionProps, Props(new EmptyExerciseModel(sessionProps)))))
+    classifier = sessionProps.classification match {
+      case RandomClassification ⇒ Some(context.actorOf(UserExercisesClassifier.props(sessionProps, Props(new RandomExerciseModel(sessionProps)))))
+      case ExplicitClassification ⇒ None
+    }
   }
   
   def unregisterModelChecking(): Unit = {

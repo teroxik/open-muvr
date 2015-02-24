@@ -74,6 +74,22 @@ package object exercise {
   case class Exercise(name: ExerciseName, intensity: Option[Double], metric: Option[Metric])
 
   /**
+   * Represents the requested classification modelling for a session
+   */
+  sealed trait RequestedClassification
+
+  /**
+   * No automatic classification, the user will classify the exercises
+   * explicitly.
+   */
+  case object ExplicitClassification extends RequestedClassification
+
+  /**
+   * Classification by RandomExerciseModel
+   */
+  case object RandomClassification extends RequestedClassification
+
+  /**
    * The suggestion source ADT
    */
   sealed trait SuggestionSource

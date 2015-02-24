@@ -5,16 +5,72 @@ import java.text.SimpleDateFormat
 import com.eigengo.lift.common.{CommonMarshallers, CommonPathDirectives}
 import org.json4s.JsonAST._
 import org.json4s.native.JsonParser
-import spray.http.{HttpEntity, HttpRequest, HttpResponse}
-import spray.httpx.marshalling.{ToResponseMarshaller, ToResponseMarshallingContext}
-import spray.httpx.unmarshalling.{Deserialized, FromRequestUnmarshaller, MalformedContent}
+import spray.http._
+import spray.httpx.marshalling.{Marshaller, ToResponseMarshaller, ToResponseMarshallingContext}
+import spray.httpx.unmarshalling._
 import spray.routing._
 import spray.routing.directives.{MarshallingDirectives, PathDirectives}
+
+import scala.util.Try
 
 /**
  * Defines the marshallers for the Lift system
  */
 trait ExerciseMarshallers extends MarshallingDirectives with PathDirectives with CommonPathDirectives with CommonMarshallers {
+
+  implicit object SessionPropertiesUnmarshaller extends FromRequestUnmarshaller[SessionProperties] {
+    def apply(request: HttpRequest): Deserialized[SessionProperties] = {
+      JsonParser.parse(request.entity.asString) match {
+        case JObject(list) ⇒
+          val values = list.toMap
+          (for (
+            startDateJson <- values.get("startDate");
+            startDate <- startDateJson match {
+              case JString(dateString) ⇒ Try { json4sFormats.dateFormat.parse(dateString) }.getOrElse(None)
+              case _ ⇒ None
+            };
+            muscleGroupKeys <-
+              values.get("muscleGroupKeys") match {
+                case Some(JArray(list)) ⇒ Some(list.flatMap {
+                    case JString(muscle) ⇒ Some(muscle)
+                    case _ ⇒ None})
+                case _ ⇒ None
+              };
+            intendedIntensity <-
+              values.get("intendedIntensity") match {
+                case Some(JDouble(num)) ⇒ Some(num)
+                case _ ⇒ None
+              };
+            classification <-
+              values.get("classification") match {
+                case Some(JString("RandomClassification")) ⇒ Some(RandomClassification)
+                case Some(JString("ExplicitClassification")) ⇒ Some(ExplicitClassification)
+                case _ ⇒ None
+            }
+          ) yield Right(SessionProperties(startDate, muscleGroupKeys, intendedIntensity, classification)))
+          .getOrElse(Left(MalformedContent("Could not deserialize SessionProperties.")))
+
+        case _ ⇒ Left(MalformedContent("Could not deserialize SessionProperties."))
+      }
+    }
+  }
+
+  implicit object RequestedClassificationUnmarshaller extends FromStringOptionDeserializer[RequestedClassification] {
+    def apply(value: Option[String]): Deserialized[RequestedClassification] = value match {
+      case Some("RandomClassification") ⇒ Right(RandomClassification)
+      case Some("ExplicitClassification") ⇒ Right(ExplicitClassification)
+      case _ ⇒ Left(MalformedContent(s"Could not deserialize '$value' as RequestedClassification", None))
+    }
+  }
+
+  implicit val RequestedClassificationMarshaller =
+    Marshaller.of[RequestedClassification](ContentTypes.`application/json`) {
+      (value, contentType, context) ⇒
+        value match {
+          case RandomClassification ⇒ context.marshalTo(HttpEntity(contentType, "RandomClassification"))
+          case ExplicitClassification ⇒ context.marshalTo(HttpEntity(contentType, "ExplicitClassification"))
+        }
+    }
 
   implicit object MultiPacketFromRequestUnmarshaller extends FromRequestUnmarshaller[MultiPacket] {
     override def apply(request: HttpRequest): Deserialized[MultiPacket] = {
