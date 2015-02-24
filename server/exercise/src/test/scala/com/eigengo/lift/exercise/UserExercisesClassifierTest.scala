@@ -18,7 +18,7 @@ class UserExercisesClassifierTest
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
   val startDate = dateFormat.parse("1970-01-01")
-  val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
+  val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0, ExplicitClassification)
 
   class DummyModel(probe: ActorRef) extends Actor {
     def receive = LoggingReceive {

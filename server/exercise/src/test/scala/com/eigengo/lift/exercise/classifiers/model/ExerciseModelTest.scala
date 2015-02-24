@@ -54,7 +54,7 @@ class ExerciseModelTest
   val metadata = ModelMetadata(42)
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
   val startDate = dateFormat.parse("1970-01-01")
-  val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
+  val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0, RandomClassification)
 
   sealed trait RunningIntensity
   case object High extends RunningIntensity {
@@ -156,7 +156,7 @@ class ExerciseModelTest
     val modelProbe = TestProbe()
     val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
     val startDate = dateFormat.parse("1970-01-01")
-    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
+    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0, RandomClassification)
     implicit val prover = new SMTInterface {
       def simplify(query: Query)(implicit ec: ExecutionContext) = Future(query)
       def satisfiable(query: Query)(implicit ec: ExecutionContext) = Future(true)
@@ -197,7 +197,7 @@ class ExerciseModelTest
     val modelProbe = TestProbe()
     val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
     val startDate = dateFormat.parse("1970-01-01")
-    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
+    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0, RandomClassification)
     implicit val prover = new SMTInterface {
       def simplify(query: Query)(implicit ec: ExecutionContext) = Future(query)
       def satisfiable(query: Query)(implicit ec: ExecutionContext) = Future(true)
@@ -231,7 +231,7 @@ class ExerciseModelTest
     val example = Formula(Assert(Gesture("example", 0.9876), SensorDataSourceLocationAny))
     val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
     val startDate = dateFormat.parse("1970-01-01")
-    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
+    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0, RandomClassification)
     implicit val prover = new SMTInterface {
       def simplify(query: Query)(implicit ec: ExecutionContext) = Future(query)
       def satisfiable(query: Query)(implicit ec: ExecutionContext) = Future(true)
@@ -265,7 +265,7 @@ class ExerciseModelTest
     val modelProbe = TestProbe()
     val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
     val startDate = dateFormat.parse("1970-01-01")
-    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
+    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0, RandomClassification)
     val example1 = Formula(Assert(Gesture("example1", 0.9876), SensorDataSourceLocationAny))
     val example2 = Formula(Assert(Gesture("example2", 0.5432), SensorDataSourceLocationAny))
     implicit val prover = new SMTInterface {
