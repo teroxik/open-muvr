@@ -111,13 +111,7 @@ class RandomExerciseModel(sessionProps: SessionProperties)
             println(s"****** Rotation $location@$point | X: (${xs.min}, ${xs.max}), Y: (${ys.min}, ${ys.max}), Z: (${zs.min}, ${zs.max})")
           }
       }}
-      // FIXME: quick hack to avoid DoSing the client with `ExerciseClassification` instances
-      super.aroundReceive(receive, SensorNet(event.toMap.map { case (sensor, data) =>
-        (sensor, data.map(d => new SensorData {
-          val samplingRate = d.samplingRate
-          val values = d.values.slice(0, 1)
-        }))
-      }))
+      super.aroundReceive(receive, msg)
 
     case _ =>
       super.aroundReceive(receive, msg)
