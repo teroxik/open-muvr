@@ -22,7 +22,8 @@ object SessionId {
  */
 case class SessionProperties(startDate: Date,
                    muscleGroupKeys: Seq[MuscleGroupKey],
-                   intendedIntensity: ExerciseIntensity) {
+                   intendedIntensity: ExerciseIntensity,
+                   classification: RequestedClassification) {
   require(intendedIntensity >  0.0, "intendedIntensity must be between <0, 1)")
   require(intendedIntensity <= 1.0, "intendedIntensity must be between <0, 1)")
 

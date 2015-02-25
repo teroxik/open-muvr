@@ -3,7 +3,7 @@ import Foundation
 public class LiftServerCache {
  
     ///
-    /// Singleton instance of the LiftServer. The instances are stateless, so it is generally a
+    /// Singleton instance of the LiftServerCache. The instances are stateless, so it is generally a
     /// good idea to take advantage of the singleton
     ///
     public class var sharedInstance: LiftServerCache {

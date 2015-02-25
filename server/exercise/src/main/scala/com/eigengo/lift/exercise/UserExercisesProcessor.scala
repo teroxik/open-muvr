@@ -369,6 +369,7 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
 
           saveSnapshot(newSession)
           sender() ! \/.right(newId)
+          log.info(s"ExerciseSessionStart: requested classification is ${newSessionProps.classification}")
           registerModelChecking(newSessionProps)
           context.become(exercising(newId, newSessionProps))
         }
@@ -405,13 +406,14 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
         }
 
       // explicit classification
-      case ExerciseExplicitClassificationStart(`id`, exercise) =>
+      case ExerciseExplicitClassificationStart(`id`, exercise) ⇒
         persist(ExerciseEvt(id, ModelMetadata.user, exercise)) { evt ⇒ }
 
       case ExerciseExplicitClassificationEnd(`id`) ⇒
         self ! NoExercise(ModelMetadata.user)
 
       case ExerciseExplicitClassificationExamples(`id`) ⇒
+        // TODO: Get examples from statistics view
         classifier.foreach(_.tell(ClassificationExamples(sessionProps), sender()))
 
       // explicit metrics
@@ -444,6 +446,7 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
         saveSnapshot(evt)
         sender() ! \/.right(evt.sessionId)
         log.info(s"-> exercising(${evt.sessionId})")
+        log.info(s"ExerciseSessionStart: requested classification is ${sessionProps.classification}")
         registerModelChecking(sessionProps)
         context.become(exercising(evt.sessionId, sessionProps))
       }

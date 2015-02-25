@@ -11,6 +11,19 @@ package object exercise {
   /** Muscle group */
   type MuscleGroupKey = String
 
+  /** Requested classification */
+  type RequestedClassification = String
+
+  object RequestedClassification {
+
+    /** Random classification */
+    val RandomClassification = "RandomClassification"
+
+    /** Manual classification */
+    val ExplicitClassification = "ExplicitClassification"
+
+  }
+
   /**
    * Adds much greater than and much less than operators to ``ExerciseIntensity`` instances
    * @param intensity the wrapped intensity
