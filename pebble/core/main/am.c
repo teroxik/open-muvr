@@ -67,6 +67,12 @@ void _send_next_message() {
     }
     
     APP_LOG_AM("_send_next_message - message size: %d", size);
+    
+    int queueLength = queue_length(_am_message_queue);
+    if ((queueLength > 0) && (queueLength <= 256)) {
+        uint8_t offset = (uint8_t)(queueLength - 1);
+        gfs_update_padding((void*)buffer, offset);
+    }
 
     DictionaryIterator* message;
     AppMessageResult app_message_result;

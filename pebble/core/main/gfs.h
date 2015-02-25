@@ -48,6 +48,8 @@ extern "C" {
 int gfs_start(gfs_sample_callback_t callback, gfs_sampling_rate_t frequency);
 int gfs_stop();
 
+void gfs_update_padding(void* header, uint8_t padding);
+
 #ifdef __cplusplus
 }
 #endif
