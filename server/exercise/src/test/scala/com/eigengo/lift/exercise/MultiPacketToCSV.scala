@@ -38,17 +38,16 @@ object MultiPacketToCSV extends App {
     for (block <- MultiPacketDecoder.decode(decoderData.toByteBuffer)) {
       for (pkt <- block.packets) {
         for (data <- RootSensorDataDecoder(decoderSupport: _*).decodeAll(pkt.payload)) {
-          val csv = data.flatMap { d =>
-            d.values.map {
-              case v: AccelerometerValue =>
-                s"${block.packets},${pkt.sourceLocation},${d.samplingRate},AccelerometerValue,${v.x},${v.y},${v.z}"
+          data.zipWithIndex.foreach {
+            case (d, offset) =>
+              d.values.zipWithIndex.foreach {
+                case (v: AccelerometerValue, index) =>
+                  fd.write(s"${block.timestamp + offset + index * d.samplingRate},${pkt.sourceLocation},${d.samplingRate},AccelerometerValue,${v.x},${v.y},${v.z}\n")
 
-              case v: RotationValue =>
-                s"${block.packets},${pkt.sourceLocation},${d.samplingRate},RotationValue,${v.x},${v.y},${v.z}"
-            }
-          }.mkString("", "\n", "\n")
-
-          fd.write(csv)
+                case (v: RotationValue, index) =>
+                  fd.write(s"${block.timestamp + offset + index * d.samplingRate},${pkt.sourceLocation},${d.samplingRate},RotationValue,${v.x},${v.y},${v.z}\n")
+              }
+          }
         }
       }
     }
