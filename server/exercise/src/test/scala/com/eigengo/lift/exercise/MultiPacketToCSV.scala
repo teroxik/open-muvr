@@ -26,18 +26,27 @@ object MultiPacketToCSV extends App {
 
   // List of decoders that this utility supports
   val decoderSupport = Seq(
-    AccelerometerDataDecoder
+    AccelerometerDataDecoder,
+    RotationDataDecoder
   )
 
   val decoderData = BitVector.fromMmap(new FileInputStream(new File(inFileName)).getChannel)
 
   val fd = new FileWriter(outFileName, true)
   try {
-    fd.write("\"timestamp\",\"location\",\"rate\",\"x\",\"y\",\"z\"\n")
+    fd.write("\"timestamp\",\"location\",\"rate\",\"type\",\"x\",\"y\",\"z\"\n")
     for (block <- MultiPacketDecoder.decode(decoderData.toByteBuffer)) {
       for (pkt <- block.packets) {
         for (data <- RootSensorDataDecoder(decoderSupport: _*).decodeAll(pkt.payload)) {
-          val csv = data.asInstanceOf[List[AccelerometerData]].flatMap { d => d.values.map(v => s"${block.packets},${pkt.sourceLocation},${d.samplingRate},${v.x},${v.y},${v.z}")}.mkString("", "\n", "\n")
+          val csv = data.flatMap { d =>
+            d.values.map {
+              case v: AccelerometerValue =>
+                s"${block.packets},${pkt.sourceLocation},${d.samplingRate},AccelerometerValue,${v.x},${v.y},${v.z}"
+
+              case v: RotationValue =>
+                s"${block.packets},${pkt.sourceLocation},${d.samplingRate},RotationValue,${v.x},${v.y},${v.z}"
+            }
+          }.mkString("", "\n", "\n")
 
           fd.write(csv)
         }
