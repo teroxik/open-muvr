@@ -20,7 +20,8 @@ name := "spark"
 scalaVersion := "2.10.4"
 
 libraryDependencies ++= Seq(
-  slf4j_simple,
+  slf4j.slf4j_api,
+  slf4j.slf4j_simple,
   akkaAnalytics.cassandra,
   spark.core,
   spark.mllib,

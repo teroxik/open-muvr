@@ -28,7 +28,7 @@ libraryDependencies ++= Seq(
   parboiled,
   // Apple push notifications
   apns,
-  slf4j_simple,
+  slf4j.slf4j_simple,
   // For improving future based chaining
   async,
   // Testing
