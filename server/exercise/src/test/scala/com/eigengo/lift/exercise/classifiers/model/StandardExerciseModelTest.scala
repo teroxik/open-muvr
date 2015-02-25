@@ -8,6 +8,7 @@ import com.eigengo.lift.exercise.UserExercisesClassifier.{Tap => TapEvent}
 import com.eigengo.lift.exercise.classifiers.ExerciseModel
 import com.eigengo.lift.exercise.classifiers.workflows.ClassificationAssertions.{Neg, Gesture, BindToSensors}
 import com.eigengo.lift.exercise._
+import com.eigengo.lift.exercise.RequestedClassification._
 import com.typesafe.config.ConfigFactory
 import java.text.SimpleDateFormat
 import scala.concurrent.{ExecutionContext, Future}

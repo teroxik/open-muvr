@@ -3,6 +3,7 @@ package com.eigengo.lift.exercise
 import akka.actor.{ActorRef, ActorSystem, Actor, Props}
 import akka.event.LoggingReceive
 import akka.testkit.{TestKit, TestProbe, TestActorRef}
+import com.eigengo.lift.exercise.RequestedClassification._
 import com.eigengo.lift.exercise.UserExercises.ClassifyExerciseEvt
 import com.typesafe.config.ConfigFactory
 import java.text.SimpleDateFormat

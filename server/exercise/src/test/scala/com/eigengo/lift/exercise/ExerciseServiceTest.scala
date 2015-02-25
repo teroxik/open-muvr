@@ -6,6 +6,7 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestActor, TestKitBase, TestProbe}
 import com.eigengo.lift.common.UserId
 import com.eigengo.lift.exercise.UserExercisesClassifier.MuscleGroup
+import com.eigengo.lift.exercise.RequestedClassification._
 import com.eigengo.lift.exercise.UserExercisesProcessor._
 import com.eigengo.lift.exercise.UserExercisesSessions._
 import org.scalatest.{FlatSpec, Matchers}

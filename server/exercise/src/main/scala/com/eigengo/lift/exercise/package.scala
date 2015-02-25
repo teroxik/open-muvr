@@ -11,6 +11,19 @@ package object exercise {
   /** Muscle group */
   type MuscleGroupKey = String
 
+  /** Requested classification */
+  type RequestedClassification = String
+
+  object RequestedClassification {
+
+    /** Random classification */
+    val RandomClassification = "RandomClassification"
+
+    /** Manual classification */
+    val ExplicitClassification = "ExplicitClassification"
+
+  }
+
   /**
    * Adds much greater than and much less than operators to ``ExerciseIntensity`` instances
    * @param intensity the wrapped intensity
@@ -72,22 +85,6 @@ package object exercise {
    * @param metric the metric
    */
   case class Exercise(name: ExerciseName, intensity: Option[Double], metric: Option[Metric])
-
-  /**
-   * Represents the requested classification modelling for a session
-   */
-  sealed trait RequestedClassification
-
-  /**
-   * No automatic classification, the user will classify the exercises
-   * explicitly.
-   */
-  case object ExplicitClassification extends RequestedClassification
-
-  /**
-   * Classification by RandomExerciseModel
-   */
-  case object RandomClassification extends RequestedClassification
 
   /**
    * The suggestion source ADT

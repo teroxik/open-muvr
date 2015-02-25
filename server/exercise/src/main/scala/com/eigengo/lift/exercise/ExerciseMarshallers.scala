@@ -7,8 +7,9 @@ import com.eigengo.lift.common.{CommonMarshallers, CommonPathDirectives}
 import org.json4s.JsonAST._
 import org.json4s.native.{JsonMethods, JsonParser}
 import spray.http._
-import spray.httpx.marshalling.{ToResponseMarshaller, ToResponseMarshallingContext}
+import spray.httpx.marshalling.{Marshaller, ToResponseMarshaller, ToResponseMarshallingContext}
 import spray.httpx.unmarshalling._
+import spray.httpx.unmarshalling.UnmarshallerLifting._
 import spray.routing._
 import spray.routing.directives.{MarshallingDirectives, PathDirectives}
 
@@ -18,78 +19,7 @@ import scala.util.Try
  * Defines the marshallers for the Lift system
  */
 trait ExerciseMarshallers extends MarshallingDirectives with PathDirectives with CommonPathDirectives with CommonMarshallers {
-
-  def getDate(map: Map[String, JValue], key: String): Option[Date] = {
-    map.get(key).flatMap {
-      case JString(dateString) ⇒ Try {
-        json4sFormats.dateFormat.parse(dateString)
-      }.getOrElse(None)
-      case _ ⇒ None
-    }
-  }
-
-  def getStringArray(map: Map[String, JValue], key: String): Option[List[String]] = {
-    map.get(key).flatMap {
-      case JArray(muscles) ⇒ Some(muscles.flatMap {
-        case JString(muscle) ⇒ Some(muscle)
-        case _ ⇒ None})
-      case _ ⇒ None
-    }
-  }
-
-  def getDouble(map: Map[String, JValue], key: String): Option[Double] = {
-    map.get(key).flatMap {
-      case JDouble(num) ⇒ Some(num)
-      case _ ⇒ None
-    }
-  }
-
-  def getRequestedClassification(map: Map[String, JValue], key: String): Option[RequestedClassification] = {
-    map.get(key).flatMap {
-      case JString("RandomClassification") ⇒ Some(RandomClassification)
-      case JString("ExplicitClassification") ⇒ Some(ExplicitClassification)
-      case _ ⇒ None
-    }
-  }
-
-  implicit object SessionPropertiesUnmarshaller extends FromRequestUnmarshaller[SessionProperties] {
-    def apply(request: HttpRequest): Deserialized[SessionProperties] = {
-
-      def getSessionProperties(values: Map[String, JValue]): Option[SessionProperties] = {
-        (for (
-          startDate <- getDate(values, "startDate");
-          muscleGroupKeys <- getStringArray(values, "muscleGroupKeys");
-          intendedIntensity <- getDouble(values, "intendedIntensity");
-          classification <- getRequestedClassification(values, "classification")
-        ) yield Some(SessionProperties(startDate, muscleGroupKeys, intendedIntensity, classification))).getOrElse(None)
-      }
-
-      (JsonParser.parse(request.entity.asString) match {
-        case JObject(list) ⇒ getSessionProperties(list.toMap)
-        case _ ⇒ None
-      }).fold[Deserialized[SessionProperties]](Left(MalformedContent("Could not deserialize SessionProperties."))) { Right(_) }
-    }
-  }
-
-  implicit object SessionPropertiesToResponseMarshaller extends ToResponseMarshaller[SessionProperties] {
-    def apply(value: SessionProperties, ctx: ToResponseMarshallingContext): Unit = {
-      def getClassificationString(classification: RequestedClassification): String = {
-        classification match {
-          case RandomClassification ⇒ "RandomClassification"
-          case ExplicitClassification | _ ⇒ "ExplicitClassification"
-        }
-      }
-
-      val jObject = JObject(
-          ("startDate", JString(json4sFormats.dateFormat.format(value.startDate))),
-          ("muscleGroupKeys", JArray(value.muscleGroupKeys.map { s ⇒ JString(s) }.toList)),
-          ("intendedIntensity", JDouble(value.intendedIntensity)),
-          ("classification", JString(getClassificationString(value.classification))))
-      val json = JsonMethods.pretty(JsonMethods.render(jObject))
-      ctx.marshalTo(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, json)))
-    }
-  }
-
+  
   implicit object MultiPacketFromRequestUnmarshaller extends FromRequestUnmarshaller[MultiPacket] {
     override def apply(request: HttpRequest): Deserialized[MultiPacket] = {
       MultiPacketDecoder.decode(request.entity.data.toByteString.asByteBuffer).fold(x ⇒ Left(MalformedContent(x)), Right.apply)

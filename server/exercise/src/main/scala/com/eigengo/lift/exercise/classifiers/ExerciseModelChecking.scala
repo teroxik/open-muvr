@@ -2,8 +2,8 @@ package com.eigengo.lift.exercise.classifiers
 
 import akka.actor.{Props, ActorRef, Actor}
 import com.eigengo.lift.exercise.classifiers.model.RandomExerciseModel
-import com.eigengo.lift.exercise.{SessionProperties, UserExercisesClassifier}
-import com.eigengo.lift.exercise.{ExplicitClassification, RandomClassification }
+import com.eigengo.lift.exercise._
+import com.eigengo.lift.exercise.RequestedClassification._
 
 trait ExerciseModelChecking {
   this: Actor =>

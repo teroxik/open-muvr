@@ -9,6 +9,7 @@ import akka.testkit.{TestKit, TestProbe, TestActorRef}
 import com.eigengo.lift.exercise.UserExercises.ModelMetadata
 import com.eigengo.lift.exercise.UserExercisesClassifier.{ClassifiedExercise, NoExercise, Tap}
 import com.eigengo.lift.exercise._
+import com.eigengo.lift.exercise.RequestedClassification._
 import com.eigengo.lift.exercise.classifiers.model.provers.CVC4
 import com.eigengo.lift.exercise.classifiers.workflows.ClassificationAssertions
 import com.typesafe.config.ConfigFactory
