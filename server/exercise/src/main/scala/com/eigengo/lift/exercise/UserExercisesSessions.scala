@@ -37,7 +37,9 @@ object UserExercisesSessions {
       copy(exercises = newExercises)
     }
 
-    def withNewExercise(modelMetadata: ModelMetadata, exercise: Exercise): ExerciseSet = {
+    def withNewExercise(modelMetadata: ModelMetadata, exercise: Exercise): ExerciseSet = copy(exercises :+ exercise)
+
+    def withNewExerciseEvent(modelMetadata: ModelMetadata, exercise: Exercise): ExerciseSet = {
       val exercisesReversed = exercises.reverse
       exercisesReversed.headOption.flatMap {
         case Exercise(name, None, _) if name == exercise.name ⇒ Some(ExerciseSet((exercise :: exercisesReversed.drop(1)).reverse))
@@ -281,7 +283,7 @@ class UserExercisesSessions(notification: ActorRef, userProfile: ActorRef) exten
   private def inASet(session: ExerciseSession, set: ExerciseSet): Receive = {
     case ExerciseEvt(_, metadata, exercise) if isPersistent ⇒
       log.debug("ExerciseEvt: in a set -> in a set.")
-      context.become(inASet(session, set.withNewExercise(metadata, exercise)).orElse(queries))
+      context.become(inASet(session, set.withNewExerciseEvent(metadata, exercise)).orElse(queries))
     case NoExerciseEvt(_, metadata) if isPersistent ⇒
       log.debug("NoExerciseEvt: in a set -> exercising.")
       context.become(exercising(session.withNewExerciseSet(set)).orElse(queries))
