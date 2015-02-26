@@ -13,15 +13,17 @@ val longRunningTests = Seq(
   "com.eigengo.lift.exercise.classifiers.model.provers.CVC4Test"
 )
 
+lazy val serialization = project.in(file("serialization"))
+
 // Common code, but not protocols
-lazy val common = project.in(file("common"))
+lazy val common = project.in(file("common")).dependsOn(serialization)
 
 // Spark
-lazy val spark = project.in(file("spark"))
+lazy val spark = project.in(file("spark")).dependsOn(serialization)
 
 // Exercise
 lazy val exercise = project.in(file("exercise"))
-  .dependsOn(notificationProtocol, profileProtocol, common)
+  .dependsOn(notificationProtocol, profileProtocol, common, serialization)
   .configs(LongRunningTest, ShortRunningTest)
   .settings(inConfig(LongRunningTest)(Defaults.testTasks): _*)
   .settings(inConfig(ShortRunningTest)(Defaults.testTasks): _*)
@@ -31,8 +33,8 @@ lazy val exercise = project.in(file("exercise"))
   )
 
 // User profiles
-lazy val profile = project.in(file("profile")).dependsOn(profileProtocol, common)
-lazy val profileProtocol = project.in(file("profile-protocol")).dependsOn(common, notificationProtocol)
+lazy val profile = project.in(file("profile")).dependsOn(profileProtocol, common, serialization)
+lazy val profileProtocol = project.in(file("profile-protocol")).dependsOn(common, notificationProtocol, serialization)
 
 // Notifications
 lazy val notification = project.in(file("notification")).dependsOn(common, notificationProtocol)

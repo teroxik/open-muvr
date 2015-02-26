@@ -5,9 +5,10 @@ import java.util.{Calendar, Date}
 import akka.actor.{ActorRef, ActorLogging, Props}
 import akka.contrib.pattern.ShardRegion
 import akka.persistence.{SnapshotOffer, PersistentView}
-import com.eigengo.lift.common.{AutoPassivation, UserId}
+import com.eigengo.lift.common.AutoPassivation
 import com.eigengo.lift.notification.NotificationProtocol.DataMessagePayload
 import com.eigengo.lift.profile.UserProfileNotifications
+import com.eigengo.lift.serialization.profile.UserId
 
 object UserExercisesSessions {
   import UserExercises._

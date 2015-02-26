@@ -45,12 +45,13 @@ class TestSuggestionsJob() extends Batch[Unit, Unit] with HttpClient with Exerci
       sc.cassandraTable("akka", "messages")
         .select("processor_id", "partition_nr", "sequence_nr", "message")
         .as(journalKeyEventPair)
-        .map(_._1.persistenceId)
-        .filter(x => x.startsWith("user-profile-") && !x.contains("processor"))
-        .map(_.drop(13))
-        .distinct()
+        //.map(_._1.persistenceId)
+        //.filter(x => x.startsWith("user-profile-") && !x.contains("processor"))
+        //.map(_.drop(13))
+        //.distinct()
         .collect()
         .map(x => {
+          println(s"EVENT $x")
           //TODO: This is run in the driver program.
           //TODO: Running at workers results in serializationexception. Can be fixed?
           val rand = new Random(System.currentTimeMillis())

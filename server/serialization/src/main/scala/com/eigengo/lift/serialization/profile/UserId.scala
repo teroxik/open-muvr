@@ -1,4 +1,4 @@
-package com.eigengo.lift.common
+package com.eigengo.lift.serialization.profile
 
 import java.util.UUID
 
