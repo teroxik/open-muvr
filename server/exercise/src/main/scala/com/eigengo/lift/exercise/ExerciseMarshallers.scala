@@ -1,19 +1,15 @@
 package com.eigengo.lift.exercise
 
 import java.text.SimpleDateFormat
-import java.util.Date
 
 import com.eigengo.lift.common.{CommonMarshallers, CommonPathDirectives}
 import org.json4s.JsonAST._
-import org.json4s.native.{JsonMethods, JsonParser}
+import org.json4s.native.JsonParser
 import spray.http._
-import spray.httpx.marshalling.{Marshaller, ToResponseMarshaller, ToResponseMarshallingContext}
+import spray.httpx.marshalling.{BasicMarshallers, ToResponseMarshaller, ToResponseMarshallingContext}
 import spray.httpx.unmarshalling._
-import spray.httpx.unmarshalling.UnmarshallerLifting._
 import spray.routing._
 import spray.routing.directives.{MarshallingDirectives, PathDirectives}
-
-import scala.util.Try
 
 /**
  * Defines the marshallers for the Lift system

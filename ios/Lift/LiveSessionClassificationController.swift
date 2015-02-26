@@ -194,7 +194,7 @@ class LiveSessionClassificationController : UITableViewController, ExerciseSessi
         } else {
             if selectedIndexPath != nil { session.endExplicitClassification() }
             let exercise = classificationExamples[indexPath.row]
-            session.startExplicitClassification(exercise)
+            session.startExplicitClassification(exercise.name)
             selectedIndexPath = indexPath
             isTagging = true
             tagView.setExercise(exercise)
@@ -207,7 +207,7 @@ class LiveSessionClassificationController : UITableViewController, ExerciseSessi
     
     private func sendClassification(actualExercise: Exercise.Exercise, count: Int) {
         if count > 0 {
-            session.startExplicitClassification(actualExercise) { _ in self.sendClassification(actualExercise, count: count - 1) }
+            session.markExerciseExplicit(actualExercise) { _ in self.sendClassification(actualExercise, count: count - 1) }
         } else {
             session.endExplicitClassification()
         }

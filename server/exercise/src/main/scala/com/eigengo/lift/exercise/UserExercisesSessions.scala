@@ -38,14 +38,6 @@ object UserExercisesSessions {
     }
 
     def withNewExercise(modelMetadata: ModelMetadata, exercise: Exercise): ExerciseSet = copy(exercises :+ exercise)
-
-    def withNewExerciseEvent(modelMetadata: ModelMetadata, exercise: Exercise): ExerciseSet = {
-      val exercisesReversed = exercises.reverse
-      exercisesReversed.headOption.flatMap {
-        case Exercise(name, None, _) if name == exercise.name ⇒ Some(ExerciseSet((exercise :: exercisesReversed.drop(1)).reverse))
-        case _ ⇒ None
-      }.getOrElse(ExerciseSet(exercises :+ exercise))
-    }
   }
   
   object ExerciseSet {
@@ -281,9 +273,12 @@ class UserExercisesSessions(notification: ActorRef, userProfile: ActorRef) exten
   }
 
   private def inASet(session: ExerciseSession, set: ExerciseSet): Receive = {
+    case ExerciseStartClassificationEvt(_, exerciseName) if isPersistent ⇒
+      log.debug("ExerciseStartClassificationEvt: in a set -> exercising.")
+      context.become(exercising(session.withNewExerciseSet(set)).orElse(queries))
     case ExerciseEvt(_, metadata, exercise) if isPersistent ⇒
       log.debug("ExerciseEvt: in a set -> in a set.")
-      context.become(inASet(session, set.withNewExerciseEvent(metadata, exercise)).orElse(queries))
+      context.become(inASet(session, set.withNewExercise(metadata, exercise)).orElse(queries))
     case NoExerciseEvt(_, metadata) if isPersistent ⇒
       log.debug("NoExerciseEvt: in a set -> exercising.")
       context.become(exercising(session.withNewExerciseSet(set)).orElse(queries))
@@ -305,6 +300,10 @@ class UserExercisesSessions(notification: ActorRef, userProfile: ActorRef) exten
   }
   
   private def exercising(session: ExerciseSession): Receive = {
+    case ExerciseStartClassificationEvt(_, exerciseName) if isPersistent ⇒
+      log.debug("ExerciseStartClassificationEvt: exercising -> in a set.")
+      context.become(inASet(session, ExerciseSet(ModelMetadata.user, Exercise(exerciseName, None, None))).orElse(queries))
+
     case ExerciseEvt(_, metadata, exercise) if isPersistent ⇒
       log.debug("ExerciseEvt: exercising -> in a set.")
       context.become(inASet(session, ExerciseSet(metadata, exercise)).orElse(queries))
