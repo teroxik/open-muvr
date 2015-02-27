@@ -105,6 +105,25 @@ extractFeatures = function(inputList, size, tag, inc = 10) {
 # (user) labeled sample window encoded as a feature vector (extracted using DCT). Here, indexes are compared against information
 # in a tagging file and, if a match occurs, then the current window is tagged.
 #
+# Example R session:
+#
+# library(dygraph)
+# size = 25
+# rawData = read.csv(file="FILENAME.csv", header=TRUE)
+# data = subset(rawData, location == "wrist.2")
+# dygraph(ts(data["x"]))
+# write.table(data[,c("x","y","z")], file="TAG.csv", sep=",", row.names=FALSE, col.names=FALSE)
+#
+# ## Now we may generate start/end indexes for INDEX.csv
+#
+# extractFeaturesWithTagFile("TAG.csv", "INDEX.csv", size, "TAG")
+#
+# ## Now we train our SVM
+# 
+# trainSVM("TAG", size)
+#
+# ## Current directory should now contain a trained SVM!
+#
 # @param input    CSV file name holding accelerometer data
 # @param tagInput CSV file name holding start and end indexes for data that is to be tagged
 # @param size     size of sampling window
