@@ -309,7 +309,7 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
   import ActorPublisherMessage._
   import context.dispatcher
   import ExerciseModel._
-  import FlowGraphImplicits._
+  import FlowGraph.Implicits._
 
   val config = context.system.settings.config
   val settings = ActorFlowMaterializerSettings(context.system)
@@ -340,12 +340,12 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
    *
    * @param query  query that we have been requested to watch
    */
-  protected def makeDecision(query: Query): Flow[QueryValue, Option[ClassifiedExercise]]
+  protected def makeDecision(query: Query): Flow[QueryValue, Option[ClassifiedExercise], _]
 
   /**
    * Defined by implementing subclasses. Configurable flow defined by implementing subclasses
    */
-  protected def workflow: Flow[SensorNetValue, BindToSensors]
+  protected def workflow: Flow[SensorNetValue, BindToSensors, _]
 
   /**
    * Flow that defines how per query evaluation influences decision making (and so messages received by UserExercisesProcessor)
@@ -407,43 +407,43 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
    *   - how (`watch`) queries are evaluated (i.e. `evaluateQuery`) over that trace
    *   - how decision messages (i.e. result of `makeDecision`) are relayed back to `UserExercisesProcessor`.
    */
-  private def model: FlowGraph = {
+  private def model: RunnableFlow[Unit] = {
     if (toWatch.isEmpty) {
       // No queries to watch, so we ignore all SensorNetValue's
-      FlowGraph { implicit builder =>
+      FlowGraph.closed() { implicit builder =>
         Source(ActorPublisher(self)) ~> Sink.ignore
       }
     } else if (toWatch.size == 1) {
       // We have at least one query to watch and report upon
-      FlowGraph { implicit builder =>
-        val split = Unzip[SensorNetValue, ActorRef]
-        val join = Zip[Option[ClassifiedExercise], ActorRef]
+      FlowGraph.closed() { implicit builder =>
+        val split = builder.add(Unzip[SensorNetValue, ActorRef]())
+        val join = builder.add(Zip[Option[ClassifiedExercise], ActorRef]())
         val query = toWatch.head
 
         Source(ActorPublisher(self)) ~> split.in
         // 2 element sliding window allows workflow to look ahead one step and determine if the event trace is in its last state or not
-        split.left ~> workflow.transform(() => SlidingWindow[BindToSensors](2)) ~> evaluate(query) ~> makeDecision(query) ~> join.left
-        split.right ~> join.right
+        split.out0 ~> workflow.transform(() => SlidingWindow[BindToSensors](2)) ~> evaluate(query) ~> makeDecision(query) ~> join.in0
+        split.out1 ~> join.in1
         join.out ~> Flow[(Option[ClassifiedExercise], ActorRef)]
           .filter(_._1.nonEmpty)
           .map { case (ex, ref) => (ex.get, ref) } ~> Sink.foreach[(ClassifiedExercise, ActorRef)] { case (exercise, ref) => ref ! exercise }
       }
     } else {
       // We have multiple queries to watch and report upon
-      FlowGraph { implicit builder =>
-        val split = Unzip[SensorNetValue, ActorRef]
-        val listener = Broadcast[ActorRef]
-        val event = Broadcast[List[BindToSensors]]
+      FlowGraph.closed() { implicit builder =>
+        val split = builder.add(Unzip[SensorNetValue, ActorRef]())
+        val listener = builder.add(Broadcast[ActorRef](toWatch.size))
+        val event = builder.add(Broadcast[List[BindToSensors]](toWatch.size))
 
         Source(ActorPublisher(self)) ~> split.in
         // 2 element sliding window allows workflow to look ahead one step and determine if the event trace is in its last state or not
-        split.left ~> workflow.transform(() => SlidingWindow[BindToSensors](2)) ~> event
-        split.right ~> listener
+        split.out0 ~> workflow.transform(() => SlidingWindow[BindToSensors](2)) ~> event
+        split.out1 ~> listener
         for (query <- toWatch) {
-          val join = Zip[Option[ClassifiedExercise], ActorRef]
+          val join = builder.add(Zip[Option[ClassifiedExercise], ActorRef]())
 
-          event ~> evaluate(query) ~> makeDecision(query) ~> join.left
-          listener ~> join.right
+          event ~> evaluate(query) ~> makeDecision(query) ~> join.in0
+          listener ~> join.in1
           join.out ~> Flow[(Option[ClassifiedExercise], ActorRef)]
             .filter(_._1.nonEmpty)
             .map { case (ex, ref) => (ex.get, ref) } ~> Sink.foreach[(ClassifiedExercise, ActorRef)] { case (exercise, ref) => ref ! exercise }
