@@ -340,12 +340,12 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
    *
    * @param query  query that we have been requested to watch
    */
-  protected def makeDecision(query: Query): Flow[QueryValue, Option[ClassifiedExercise], _]
+  protected def makeDecision(query: Query): Flow[QueryValue, Option[ClassifiedExercise], Unit]
 
   /**
    * Defined by implementing subclasses. Configurable flow defined by implementing subclasses
    */
-  protected def workflow: Flow[SensorNetValue, BindToSensors, _]
+  protected def workflow: Flow[SensorNetValue, BindToSensors, Unit]
 
   /**
    * Flow that defines how per query evaluation influences decision making (and so messages received by UserExercisesProcessor)
