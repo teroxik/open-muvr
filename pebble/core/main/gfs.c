@@ -19,6 +19,14 @@ static struct {
 #define SIGNED_12_MAX(x) (int16_t)((x) > 4095 ? 4095 : ((x) < -4095 ? -4095 : (x)))
 
 /**
+ * Updates the padding value of the header
+ */
+void gfs_update_padding(void* header, uint8_t padding) {
+    struct gfs_header *h = (struct gfs_header *) header;
+    h->_padding = padding;
+}
+
+/**
  * Write the header and reset the buffer position
  */
 void gfs_write_header() {
