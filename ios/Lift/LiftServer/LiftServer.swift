@@ -277,7 +277,7 @@ public class LiftServer {
     }
     
     ///
-    /// Body is either JSON structure or NSData
+    /// Body is either JSON structure, Text or NSData
     ///
     private enum Body {
         case Json(params: [String : AnyObject])
@@ -423,10 +423,18 @@ public class LiftServer {
     }
 
     ///
-    /// Submit data for an explicit exerise to the server
+    /// Submit an explicit exercise start to the server
     ///
-    func exerciseSessionStartExplicitClassification(userId: NSUUID, sessionId: NSUUID, exercise: Exercise.Exercise, f: Result<Void> -> Void) -> Void {
-        request(LiftServerURLs.ExplicitExerciseClassificationStart(userId, sessionId), body: .Json(params: exercise.marshal()))
+    func exerciseSessionStartExplicitClassification(userId: NSUUID, sessionId: NSUUID, exerciseName: String, f: Result<Void> -> Void) -> Void {
+        request(LiftServerURLs.ExplicitExerciseClassificationStart(userId, sessionId))
+            .responseAsResult(asu(), f, const(()))
+    }
+    
+    ///
+    /// Submit data for a marked exerise to the server
+    ///
+    func exerciseSessionMarkExplicitClassification(userId: NSUUID, sessionId: NSUUID, exercise: Exercise.Exercise, f: Result<Void> -> Void) -> Void {
+        request(LiftServerURLs.ExplicitExerciseClassificationMark(userId, sessionId), body: .Json(params: exercise.marshal()))
             .responseAsResult(asu(), f, const(()))
     }
         

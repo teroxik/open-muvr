@@ -114,8 +114,16 @@ trait ExerciseService extends Directives with ExerciseMarshallers {
         }
       } ~
       post {
+        parameter('exerciseName.as[String]) { exerciseName ⇒
+          complete {
+            userExercisesProcessor ! UserExerciseExplicitClassificationStart(userId, sessionId, exerciseName)
+            ()
+          }
+        }
+      } ~
+      put {
         handleWith { exercise: Exercise ⇒
-          userExercisesProcessor ! UserExerciseExplicitClassificationStart(userId, sessionId, exercise)
+          userExercisesProcessor ! UserExerciseExplicitClassificationMark(userId, sessionId, exercise)
           ()
         }
       } ~

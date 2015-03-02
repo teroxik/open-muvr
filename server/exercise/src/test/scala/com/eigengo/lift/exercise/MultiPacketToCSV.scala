@@ -1,7 +1,7 @@
 package com.eigengo.lift.exercise
 
 import java.io._
-
+import java.nio.BufferUnderflowException
 import scodec.bits.BitVector
 
 /**
@@ -26,25 +26,42 @@ object MultiPacketToCSV extends App {
 
   // List of decoders that this utility supports
   val decoderSupport = Seq(
-    AccelerometerDataDecoder
+    AccelerometerDataDecoder,
+    RotationDataDecoder
   )
 
-  val decoderData = BitVector.fromMmap(new FileInputStream(new File(inFileName)).getChannel)
+  val fIn = new FileInputStream(new File(inFileName)).getChannel
+  val fOut = new FileWriter(outFileName, true)
 
-  val fd = new FileWriter(outFileName, true)
+  val decoderBuffer = BitVector.fromMmap(fIn).toByteBuffer
+
   try {
-    fd.write("\"timestamp\",\"location\",\"rate\",\"x\",\"y\",\"z\"\n")
-    for (block <- MultiPacketDecoder.decode(decoderData.toByteBuffer)) {
-      for (pkt <- block.packets) {
-        for (data <- RootSensorDataDecoder(decoderSupport: _*).decodeAll(pkt.payload)) {
-          val csv = data.asInstanceOf[List[AccelerometerData]].flatMap { d => d.values.map(v => s"${block.packets},${pkt.sourceLocation},${d.samplingRate},${v.x},${v.y},${v.z}")}.mkString("", "\n", "\n")
+    fOut.write("\"timestamp\",\"location\",\"rate\",\"type\",\"x\",\"y\",\"z\"\n")
+    while (true) {
+      for (block <- MultiPacketDecoder.decode(decoderBuffer)) {
+        for ((pkt, index) <- block.packets.zipWithIndex) {
+          for (data <- RootSensorDataDecoder(decoderSupport: _*).decodeAll(pkt.payload)) {
+            data.foreach { d =>
+                val blockTime = d.values.length
 
-          fd.write(csv)
+                d.values.zipWithIndex.foreach {
+                  case (v: AccelerometerValue, offset) =>
+                    fOut.write(s"${(block.timestamp - 1) * blockTime + offset},${pkt.sourceLocation}.$index,${d.samplingRate},AccelerometerValue,${v.x},${v.y},${v.z}\n")
+
+                  case (v: RotationValue, offset) =>
+                    fOut.write(s"${(block.timestamp - 1) * blockTime + offset},${pkt.sourceLocation}.$index,${d.samplingRate},RotationValue,${v.x},${v.y},${v.z}\n")
+                }
+            }
+          }
         }
       }
     }
+  } catch {
+    case exn: BufferUnderflowException =>
+      // We can not parse any more multi-packets from the input file
+      fOut.close()
   } finally {
-    fd.close()
+    fOut.close()
   }
 
 }

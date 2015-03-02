@@ -264,9 +264,15 @@ class ManagedExerciseSession : ExerciseSession {
         managedSession.getClassificationExamples(f)
     }
     
-    override func startExplicitClassification(exercise: Exercise.Exercise) -> Void {
+    override func startExplicitClassification(exerciseName: String) -> Void {
         if !isOffline {
-            managedSession.startExplicitClassification(exercise)
+            managedSession.startExplicitClassification(exerciseName)
+        }
+    }
+    
+    override func markExerciseExplicit(exercise: Exercise.Exercise, f: Result<Void> -> Void) -> Void {
+        if !isOffline {
+            managedSession.markExerciseExplicit(exercise, f: f)
         }
     }
     
