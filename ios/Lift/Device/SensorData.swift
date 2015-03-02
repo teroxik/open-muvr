@@ -103,6 +103,7 @@ class SensorDataGroup {
             let count = header[1]
             let samplesPerSecond = header[2]
             let sampleSize = header[3]
+            let offset = header[4]
 
             let length = Int(count) * Int(sampleSize)
             if data.length < headerSize + length {
@@ -110,7 +111,8 @@ class SensorDataGroup {
             }
             let key = SensorDataArrayHeader(sourceDeviceId: id, type: type, sampleSize: sampleSize, samplesPerSecond: samplesPerSecond)
             let samples = data.subdataWithRange(NSMakeRange(headerSize, length))
-            let sensorData = SensorData(startTime: time, samples: samples)
+            let offsetedTime = time - CFTimeInterval(Double(offset) * Double(count) / Double(samplesPerSecond))
+            let sensorData = SensorData(startTime: offsetedTime, samples: samples)
             if let x = (sensorDataArrays.find { $0.header == key }) {
                 x.append(sensorData: sensorData, maximumGap: gap, gapValue: gapValue)
             } else {

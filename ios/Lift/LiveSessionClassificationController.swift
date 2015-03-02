@@ -1,40 +1,32 @@
 import Foundation
 
 ///
-/// Implement this protocol to receive notifications of the user actions
-/// on the LiveSessionClassificationCell
+/// Implement this protocol to receive notifications of tagging
+/// on the LiveSessionTagView
 ///
-protocol LiveSessionClassificationCellDelegate {
+protocol LiveSessionClassificationTagDelegate {
     
-    func repetitions(count: Int, of exercise: Exercise.Exercise)
-    
-    func intensity(key: Exercise.ExerciseIntensityKey, of exercise: Exercise.Exercise)
+    func doneTagging(exercise: Exercise.Exercise, intensity: Exercise.ExerciseIntensityKey, repetition: Int)
     
 }
 
-///
-/// Displays the cell of live classification exercise, allowing the user to set
-/// the repetitions, intensity, and—in the future—metric.
-///
-class LiveSessionClassificationCell : UITableViewCell {
-    /// default cell heights
-    struct Height {
-        static let expanded: CGFloat = 160
-        static let collapsed: CGFloat = 40
-    }
+class LiveSessionTagView : UIView {
+    
+    private let selectedButtonColor: UIColor = UIColor(red: 0.25098040700000002, green: 0.50196081400000003, blue: 0.0, alpha: 1)
+    private let nonSelectedButtonColor: UIColor = UIColor(red: 0.0, green: 0.47843137250000001, blue: 1.0, alpha: 1)
     
     /// default values
     struct Defaults {
-        static let repetitions: [Int] = [10, 2, 5, 8]
+        static let repetitions: [Int] = [2, 5, 8, 10]
         static let intensities: [Exercise.ExerciseIntensityKey] = [
-            Exercise.ExerciseIntensity.moderate,
             Exercise.ExerciseIntensity.light,
+            Exercise.ExerciseIntensity.moderate,
             Exercise.ExerciseIntensity.hard,
             Exercise.ExerciseIntensity.brutal
-        ].map { $0.intensity }
+            ].map { $0.intensity }
     }
     
-    private var delegate: LiveSessionClassificationCellDelegate?
+    private var delegate: LiveSessionClassificationTagDelegate?
     
     @IBOutlet var titleLabel: UILabel!
     
@@ -42,16 +34,27 @@ class LiveSessionClassificationCell : UITableViewCell {
     @IBOutlet var leftIntensityButton: UIButton!
     @IBOutlet var middleIntensityButton: UIButton!
     @IBOutlet var rightIntensityButton: UIButton!
-
+    
     @IBOutlet var defaultRepetitionsButton: UIButton!
     @IBOutlet var leftRepetitionsButton: UIButton!
     @IBOutlet var middleRepetitionsButton: UIButton!
     @IBOutlet var rightRepetitionsButton: UIButton!
-
+    
     private var repetitions: [Int]!
     private var intensities: [Exercise.ExerciseIntensityKey]!
     private var exercise: Exercise.Exercise!
-
+    
+    private var selectedIntensity: Exercise.ExerciseIntensityKey = Defaults.intensities[0]
+    private var selectedRepetition: Int = Defaults.repetitions[0]
+    
+    private func getIntensityButtons() -> [UIButton] {
+        return [defaultIntensityButton, leftIntensityButton, middleIntensityButton, rightIntensityButton]
+    }
+    
+    private func getRepetitionButtons() -> [UIButton] {
+        return [defaultRepetitionsButton, leftRepetitionsButton, middleRepetitionsButton, rightRepetitionsButton]
+    }
+    
     ///
     /// Update this cell with the given ``exercise``
     ///
@@ -61,51 +64,100 @@ class LiveSessionClassificationCell : UITableViewCell {
         
         repetitions = Defaults.repetitions
         intensities = Defaults.intensities
-
-        let allStates = UIControlState.Normal | UIControlState.Highlighted | UIControlState.Selected
-        defaultIntensityButton.setTitle(intensities[0].intensity.title, forState: allStates)
-        leftIntensityButton.setTitle(   intensities[1].intensity.title, forState: allStates)
-        middleIntensityButton.setTitle( intensities[2].intensity.title, forState: allStates)
-        rightIntensityButton.setTitle(  intensities[3].intensity.title, forState: allStates)
         
-        defaultRepetitionsButton.setTitle(String(repetitions[0]), forState: allStates)
-        leftRepetitionsButton.setTitle(   String(repetitions[1]), forState: allStates)
-        middleRepetitionsButton.setTitle( String(repetitions[2]), forState: allStates)
-        rightRepetitionsButton.setTitle(  String(repetitions[3]), forState: allStates)
+        let allStates = UIControlState.Normal | UIControlState.Highlighted | UIControlState.Selected
+        
+        getIntensityButtons().zipWithIndex().foreach { (i, button) -> Void in
+            button.setTitle(self.intensities[i].intensity.title, forState: allStates)
+            button.tag = i
+            button.backgroundColor = self.nonSelectedButtonColor
+        }
+        defaultIntensityButton.backgroundColor = selectedButtonColor
+        selectedIntensity = intensities[0]
+        
+        getRepetitionButtons().zipWithIndex().foreach { (i, button) -> Void in
+            button.setTitle(self.intensities[i].intensity.title, forState: allStates)
+            button.tag = i
+            button.backgroundColor = self.nonSelectedButtonColor
+        }
+        defaultRepetitionsButton.backgroundColor = selectedButtonColor
+        selectedRepetition = repetitions[0]
         
         self.exercise = exercise
     }
     
     @IBAction
     func repetition(sender: UIButton) {
-        let delta = repetitions[sender.tag]
-        delegate?.repetitions(delta, of: exercise)
+        selectedRepetition = repetitions[sender.tag]
+        getRepetitionButtons().foreach { button in
+            button.backgroundColor = self.nonSelectedButtonColor
+        }
+        sender.backgroundColor = selectedButtonColor
     }
     
     @IBAction
     func intensity(sender: UIButton) {
-        let intensity = intensities[sender.tag]
-        delegate?.intensity(intensity, of: exercise)
+        selectedIntensity = intensities[sender.tag]
+        getIntensityButtons().foreach { button in
+            button.backgroundColor = self.nonSelectedButtonColor
+        }
+        sender.backgroundColor = selectedButtonColor
+    }
+    
+    @IBAction
+    func done(sender: UIButton) {
+        delegate?.doneTagging(exercise, intensity: selectedIntensity, repetition: selectedRepetition)
     }
     
 }
 
-class LiveSessionClassificationController : UITableViewController, ExerciseSessionSettable, LiveSessionClassificationCellDelegate {
+///
+/// Displays the cell of live classification exercises.
+///
+class LiveSessionClassificationCell : UITableViewCell {
+    
+    @IBOutlet var titleLabel: UILabel!
+
+    private var exercise: Exercise.Exercise!
+
+    ///
+    /// Update this cell with the given ``exercise``
+    ///
+    func setExercise(exercise: Exercise.Exercise) {
+        titleLabel.text = exercise.name
+        self.exercise = exercise
+    }
+    
+}
+
+class LiveSessionClassificationController : UITableViewController, ExerciseSessionSettable, LiveSessionClassificationTagDelegate {
+    private var isTagging = false
     private var classificationExamples: [Exercise.Exercise] = []
     private var session: ExerciseSession!
     private var selectedIndexPath: NSIndexPath?
     
+    @IBOutlet weak var tagView: LiveSessionTagView!
+    
     override func viewDidLoad() {
+        tagView.hidden = true
+        tagView.delegate = self
         super.viewDidLoad()
     }
     
     // MARK: ExerciseSessionSettable implementation
     func setExerciseSession(session: ExerciseSession) {
         self.session = session
-        self.session.getClassificationExamples { $0.getOrUnit { x in
-                self.classificationExamples = x
-                self.tableView.reloadData()
-            }
+        self.session.getClassificationExamples { x in
+            let examples = x.cata(
+                { _ -> [Exercise.Exercise] in
+                    return ClassificationExamplesCache.sharedInstance.getExamplesFor(session.props)
+                }
+                , r: { (result: [Exercise.Exercise]) -> [Exercise.Exercise] in
+                    ClassificationExamplesCache.sharedInstance.addExamplesToCache(session.props, values: result)
+                    return result
+                })
+            self.classificationExamples = examples
+            self.tableView.reloadData()
         }
     }
     
@@ -114,16 +166,15 @@ class LiveSessionClassificationController : UITableViewController, ExerciseSessi
     }
     
     override func tableView(tableView: UITableView, heightForRowAtIndexPath indexPath: NSIndexPath) -> CGFloat {
-        if let sip = selectedIndexPath {
-            if sip == indexPath { return LiveSessionClassificationCell.Height.expanded }
-            return LiveSessionClassificationCell.Height.collapsed
-        }
-        
         return 40
     }
     
     override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return classificationExamples.count
+        if isTagging {
+            return 0
+        } else {
+            return classificationExamples.count
+        }
     }
     
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
@@ -131,7 +182,6 @@ class LiveSessionClassificationController : UITableViewController, ExerciseSessi
         case (0, let x):
             let cell = tableView.dequeueReusableCellWithIdentifier("manual") as LiveSessionClassificationCell
             cell.setExercise(classificationExamples[x])
-            cell.delegate = self
             return cell
         default: fatalError("Match error")
         }
@@ -144,23 +194,32 @@ class LiveSessionClassificationController : UITableViewController, ExerciseSessi
         } else {
             if selectedIndexPath != nil { session.endExplicitClassification() }
             let exercise = classificationExamples[indexPath.row]
-            session.startExplicitClassification(exercise)
+            session.startExplicitClassification(exercise.name)
             selectedIndexPath = indexPath
+            isTagging = true
+            tagView.setExercise(exercise)
+            tagView.hidden = false
         }
-        tableView.reloadRowsAtIndexPaths([indexPath], withRowAnimation: UITableViewRowAnimation.Fade)
+        tableView.reloadData()
     }
     
-    // MARK: LiveSessionClassificationCellDelegate code
-    func repetitions(count: Int, of exercise: Exercise.Exercise) {
-        // note that we're sending one fewer request
-        // the act of selecting the cell has already sent one
-        for _ in 1..<count {
-            session.startExplicitClassification(exercise)
+    // MARK: LiveSessionClassificationTagDelegate code
+    
+    private func sendClassification(actualExercise: Exercise.Exercise, count: Int) {
+        if count > 0 {
+            session.markExerciseExplicit(actualExercise) { _ in self.sendClassification(actualExercise, count: count - 1) }
+        } else {
+            session.endExplicitClassification()
         }
     }
     
-    func intensity(key: Exercise.ExerciseIntensityKey, of exercise: Exercise.Exercise) {
-        // TODO
+    func doneTagging(exercise: Exercise.Exercise, intensity: Exercise.ExerciseIntensityKey, repetition: Int) {
+        let actualExercise = Exercise.Exercise(name: exercise.name, intensity: intensity, metric: nil)
+        sendClassification(actualExercise, count: repetition)
+        
+        isTagging = false
+        tagView.hidden = true
+        tableView.reloadData()
     }
     
 }

@@ -84,7 +84,7 @@ extractFeatures = function(inputList, size, tag, inc = 10) {
   zLabels = lapply(rep(1:size), function(index) { paste("z", index, sep="") })
   result = NULL
   for (input in inputList) {
-    csv = read.csv(file=input, col.names=c("x", "y", "z"))
+    csv = read.csv(file=input, col.names=c("x", "y", "z"), header=FALSE)
     for (window in windowSampling(csv, size, inc)) {
       startIndex = as.integer(window[1])
       endIndex = as.integer(window[2])
@@ -99,6 +99,63 @@ extractFeatures = function(inputList, size, tag, inc = 10) {
     }
   }
   write.table(result, file=paste("svm", "-", tag, "-features", ".csv", sep=""), sep=",", row.names=FALSE, col.names=FALSE)
+}
+
+# Function used to build and create file containing example feature vectors. Each row of the CSV data file represents a
+# (user) labeled sample window encoded as a feature vector (extracted using DCT). Here, indexes are compared against information
+# in a tagging file and, if a match occurs, then the current window is tagged.
+#
+# Example R session:
+#
+# > library(dygraph)
+# > size = 25
+# > rawData = read.csv(file="FILENAME.csv", header=TRUE)
+# > data = subset(rawData, location == "wrist.2")
+# > dygraph(ts(data["x"]))
+# > write.table(data[,c("x","y","z")], file="TAG.csv", sep=",", row.names=FALSE, col.names=FALSE)
+# >
+# > ## Now we may generate start/end indexes for INDEX.csv
+# >
+# > extractFeaturesWithTagFile("TAG.csv", "INDEX.csv", size, "TAG")
+# >
+# > ## Now we train our SVM
+# > 
+# > trainSVM("TAG", size)
+# >
+# > ## Current directory should now contain a trained SVM!
+#
+# @param input    CSV file name holding accelerometer data
+# @param tagInput CSV file name holding start and end indexes for data that is to be tagged
+# @param size     size of sampling window
+# @param tag      used to tag (user) classified data with
+# @param inc      increment by which we move sampling window (default is 10 events)
+extractFeaturesWithTagFile = function(input, tagInput, size, tag, inc=10) {
+  csv = read.csv(file=input, col.names=c("x", "y", "z"), header=FALSE)
+  tagIndex = read.csv(file=tagInput, col.names=c("start", "end"), header=FALSE)
+  windowSize = min(size, tagIndex[,"end"] - tagIndex[,"start"])
+  xLabels = lapply(rep(1:windowSize), function(index) { paste("x", index, sep="") })
+  yLabels = lapply(rep(1:windowSize), function(index) { paste("y", index, sep="") })
+  zLabels = lapply(rep(1:windowSize), function(index) { paste("z", index, sep="") })
+
+  result = NULL
+  for (window in windowSampling(csv, windowSize, inc)) {
+    startIndex = as.integer(window[1])
+    endIndex = as.integer(window[2])
+    windowData = csv[startIndex:endIndex,]
+    feature = as.data.frame(mvdct(as.matrix(windowData)))
+    taggedFeature = if (nrow(subset(tagIndex, start <= startIndex & endIndex <= end)) > 0) {
+      print(paste("Tagging:", startIndex, "-", endIndex))
+      data.frame(c(tag, t(feature["x"]), t(feature["y"]), t(feature["z"])))
+    } else {
+      data.frame(c("", t(feature["x"]), t(feature["y"]), t(feature["z"])))
+    }
+    names(taggedFeature) = c("feature")
+    row.names(taggedFeature) = c("tag", xLabels, yLabels, zLabels)
+
+    rbind(result, t(taggedFeature)) -> result
+  }
+
+  write.table(result, file=paste("svm-", tag, "-features", ".csv", sep=""), sep=",", row.names=FALSE, col.names=FALSE)
 }
 
 ########################################################################################################################
@@ -145,7 +202,7 @@ parameterCost = function(tag, data, testData, buckets, costParam, gammaParam) {
 # @param costParam
 # @param gammaParam
 trainSVM = function(tag, size, buckets = 10, repeats = 10, costParams = 10^(0:4), gammaParams = 10^(0:-4)) {
-  data = read.csv(file=paste("svm", "-", tag, "-features", ".csv", sep=""))
+  data = read.csv(file=paste("svm", "-", tag, "-features", ".csv", sep=""), header=FALSE)
   xLabels = lapply(rep(1:size), function(index) { paste("x", index, sep="") })
   yLabels = lapply(rep(1:size), function(index) { paste("y", index, sep="") })
   zLabels = lapply(rep(1:size), function(index) { paste("z", index, sep="") })
@@ -237,7 +294,7 @@ svm_predict = function(tag, rbf = radial_kernel) {
 # @param model.predict function to be used in making model predictions (default is to use e1071 `predict` function)
 classify = function(input, tag, size, inc = 10, threshold = 0.75, model.predict = predict) {
   svm = readRDS(paste("svm-model", "-", tag, "-features", ".rds", sep=""))
-  csv = read.csv(file=input, col.names=(c("x", "y", "z")))
+  csv = read.csv(file=input, col.names=(c("x", "y", "z")), header=FALSE)
   xLabels = lapply(rep(1:size), function(index) { paste("x", index, sep="") })
   yLabels = lapply(rep(1:size), function(index) { paste("y", index, sep="") })
   zLabels = lapply(rep(1:size), function(index) { paste("z", index, sep="") })

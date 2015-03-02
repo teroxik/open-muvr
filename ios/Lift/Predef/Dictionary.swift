@@ -34,5 +34,18 @@ extension Dictionary {
             self[key] = update(x)
         }
     }
+    
+    ///
+    /// Returns a new dictionary created by mapping values with ``f``.
+    ///
+    func flatMapValues<That>(f: Value -> That?) -> [Key : That] {
+        var r = [Key : That](minimumCapacity: self.count)
+        for (k, v) in self {
+            if let value = f(v) {
+                r[k] = f(v)
+            }
+        }
+        return r
+    }
 
 }

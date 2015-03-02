@@ -5,9 +5,9 @@ import java.text.SimpleDateFormat
 import com.eigengo.lift.common.{CommonMarshallers, CommonPathDirectives}
 import org.json4s.JsonAST._
 import org.json4s.native.JsonParser
-import spray.http.{HttpEntity, HttpRequest, HttpResponse}
-import spray.httpx.marshalling.{ToResponseMarshaller, ToResponseMarshallingContext}
-import spray.httpx.unmarshalling.{Deserialized, FromRequestUnmarshaller, MalformedContent}
+import spray.http._
+import spray.httpx.marshalling.{BasicMarshallers, ToResponseMarshaller, ToResponseMarshallingContext}
+import spray.httpx.unmarshalling._
 import spray.routing._
 import spray.routing.directives.{MarshallingDirectives, PathDirectives}
 
@@ -15,7 +15,7 @@ import spray.routing.directives.{MarshallingDirectives, PathDirectives}
  * Defines the marshallers for the Lift system
  */
 trait ExerciseMarshallers extends MarshallingDirectives with PathDirectives with CommonPathDirectives with CommonMarshallers {
-
+  
   implicit object MultiPacketFromRequestUnmarshaller extends FromRequestUnmarshaller[MultiPacket] {
     override def apply(request: HttpRequest): Deserialized[MultiPacket] = {
       MultiPacketDecoder.decode(request.entity.data.toByteString.asByteBuffer).fold(x ⇒ Left(MalformedContent(x)), Right.apply)
