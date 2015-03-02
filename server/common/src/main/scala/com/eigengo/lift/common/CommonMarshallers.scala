@@ -3,12 +3,12 @@ package com.eigengo.lift.common
 import java.text.SimpleDateFormat
 import java.util.{Date, UUID}
 
-import org.json4s.JsonAST.{JNull, JString}
-import org.json4s.{Serializer, CustomSerializer, DefaultFormats, Formats}
-import spray.http.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
+import org.json4s.JsonAST._
+import org.json4s.{CustomSerializer, DefaultFormats, Formats}
+import spray.http._
 import spray.httpx.Json4sSupport
 import spray.httpx.marshalling.{ToResponseMarshallingContext, ToResponseMarshaller}
-import spray.httpx.unmarshalling.{ContentExpected, MalformedContent, Deserialized, FromStringOptionDeserializer}
+import spray.httpx.unmarshalling._
 import spray.routing.directives.MarshallingDirectives
 
 import scala.concurrent.{ExecutionContext, Future}

@@ -107,4 +107,16 @@ extension Array {
         return find(predicate) != nil
     }
     
+    ///
+    /// Constructs a new array, which contains the original elements
+    /// tupled with their index.
+    ///
+    func zipWithIndex() -> [(Int, Element)] {
+        var r: [(Int, Element)] = []
+        for i in 0..<self.count {
+            r += [(i, self[i])]
+        }
+        return r
+    }
+    
 }

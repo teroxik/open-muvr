@@ -79,11 +79,15 @@ class UserExercisesClassifier(sessionProperties: SessionProperties, modelProps: 
     // TODO: refactor code so that the following assumptions may be weakened further!
     case sdwls: ClassifyExerciseEvt =>
       require(
-        sdwls.sensorData.map(_.location).toSet == Sensor.sourceLocations && sdwls.sensorData.forall(_.data.nonEmpty),
-        "all sensor locations are present in the `ClassifyExerciseEvt` instance and have data"
+        sdwls.sensorData.nonEmpty,
+        "at least one sensor locations are present in the `ClassifyExerciseEvt` instance and have data"
       )
-      // (SensorDataSourceLocation, Int) -> List[SensorData]
-      val sensorMap: Map[SensorDataSourceLocation, List[List[SensorData]]] = sdwls.sensorData.groupBy(_.location).mapValues(_.map(_.data))
+      val sensorsGrouped = sdwls.sensorData.groupBy(_.location).mapValues(_.map(_.data))
+      val (firstLocation, _) = sensorsGrouped.head
+      val emptyDataValues: List[List[SensorData]] = sensorsGrouped(firstLocation).map(_.map(originalData ⇒
+        AccelerometerData(originalData.samplingRate, originalData.values.map(_ ⇒ AccelerometerValue(0, 0, 0)))))
+      val sensorMap: Map[SensorDataSourceLocation, List[List[SensorData]]] =
+        Sensor.sourceLocations.map(location ⇒ (location, sensorsGrouped.getOrElse(location, emptyDataValues))).toMap
       val blockSize = sensorMap(SensorDataSourceLocationWrist).head.length
       require(
         sensorMap.values.forall(_.forall(_.length == blockSize)),
