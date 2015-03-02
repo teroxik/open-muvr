@@ -2,9 +2,9 @@ package com.eigengo.lift.exercise
 
 import akka.actor.Props
 import akka.persistence.PersistentView
+import com.eigengo.lift.common.UserId
 import com.eigengo.lift.exercise.UserExercises.{SessionEndedEvt, SessionStartedEvt, ExerciseEvt}
 import com.eigengo.lift.exercise.UserExercisesSessions.ExerciseSession
-import com.eigengo.lift.serialization.profile.UserId
 
 object UserExercisesStatistics {
   /** The shard name */

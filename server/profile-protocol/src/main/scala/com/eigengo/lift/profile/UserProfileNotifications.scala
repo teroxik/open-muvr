@@ -1,9 +1,9 @@
 package com.eigengo.lift.profile
 
 import akka.actor.{Actor, ActorRef}
+import com.eigengo.lift.common.UserId
 import com.eigengo.lift.notification.NotificationProtocol.{PushMessagePayload, PushMessage, Devices}
 import com.eigengo.lift.profile.UserProfileProtocol.UserGetDevices
-import com.eigengo.lift.serialization.profile.UserId
 
 import scala.concurrent.ExecutionContext
 

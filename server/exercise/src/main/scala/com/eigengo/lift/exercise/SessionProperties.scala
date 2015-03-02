@@ -2,6 +2,8 @@ package com.eigengo.lift.exercise
 
 import java.util.{Date, UUID}
 
+import com.eigengo.lift.Exercise.{RequestedClassification, ExerciseIntensity, MuscleGroupKey}
+
 /**
  * The session identity
  * @param id the id

@@ -4,7 +4,7 @@ import java.util.Date
 
 import akka.actor.ActorSystem
 import akka.testkit.{TestActorRef, ImplicitSender, TestKitBase}
-import com.eigengo.lift.serialization.profile.UserId
+import com.eigengo.lift.common.UserId
 import com.eigengo.lift.exercise.RequestedClassification._
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{Matchers, FlatSpec}

@@ -4,8 +4,9 @@ import java.io.FileOutputStream
 
 import akka.actor.Props
 import akka.persistence.PersistentView
+import com.eigengo.lift.Exercise.Exercise
+import com.eigengo.lift.common.UserId
 import com.eigengo.lift.exercise.UserExercisesClassifier._
-import com.eigengo.lift.serialization.profile.UserId
 
 import scala.util.Try
 

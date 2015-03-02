@@ -2,7 +2,7 @@ package com.eigengo.lift
 
 import java.util.Date
 
-package object exercise {
+object Exercise {
   /** The exercise */
   type ExerciseName = String
   /** The exercise intensity 0..1 */

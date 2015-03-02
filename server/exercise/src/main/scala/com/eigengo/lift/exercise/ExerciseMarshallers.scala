@@ -2,6 +2,7 @@ package com.eigengo.lift.exercise
 
 import java.text.SimpleDateFormat
 
+import com.eigengo.lift.Exercise.{SuggestionSource, Suggestion, Suggestions}
 import com.eigengo.lift.common.{CommonMarshallers, CommonPathDirectives}
 import org.json4s.JsonAST._
 import org.json4s.native.JsonParser

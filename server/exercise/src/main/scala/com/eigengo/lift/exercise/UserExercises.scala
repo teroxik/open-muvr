@@ -1,5 +1,7 @@
 package com.eigengo.lift.exercise
 
+import com.eigengo.lift.Exercise.{Metric, Exercise, ExerciseName, Suggestions}
+
 object UserExercises {
 
   /**

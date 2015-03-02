@@ -1,6 +1,7 @@
 package com.eigengo.lift.exercise
 
 import akka.actor.{Props, Actor}
+import com.eigengo.lift.Exercise.Exercise
 import com.eigengo.lift.exercise.UserExercisesClassifier._
 import UserExercises._
 

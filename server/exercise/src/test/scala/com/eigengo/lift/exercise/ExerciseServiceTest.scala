@@ -4,11 +4,11 @@ import java.text.SimpleDateFormat
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestActor, TestKitBase, TestProbe}
+import com.eigengo.lift.common.UserId
 import com.eigengo.lift.exercise.UserExercisesClassifier.MuscleGroup
 import com.eigengo.lift.exercise.RequestedClassification._
 import com.eigengo.lift.exercise.UserExercisesProcessor._
 import com.eigengo.lift.exercise.UserExercisesSessions._
-import com.eigengo.lift.serialization.profile.UserId
 import org.scalatest.{FlatSpec, Matchers}
 import spray.http.{HttpRequest, ContentTypes, HttpEntity}
 import spray.httpx.marshalling.BasicMarshallers

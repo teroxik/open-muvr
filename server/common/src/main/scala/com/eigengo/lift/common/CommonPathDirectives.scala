@@ -1,6 +1,6 @@
 package com.eigengo.lift.common
 
-import com.eigengo.lift.serialization.profile.UserId
+import com.eigengo.lift.common.UserId
 import spray.routing._
 import spray.routing.directives.PathDirectives
 

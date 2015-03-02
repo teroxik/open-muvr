@@ -1,7 +1,6 @@
 package com.eigengo.lift.profile
 
-import com.eigengo.lift.serialization.profile.UserId
-import com.eigengo.lift.serialization.profile.UserProfileProtocolCommands.Account
+import com.eigengo.lift.common.UserId
 
 object UserProfileProtocol {
 
@@ -21,6 +20,14 @@ object UserProfileProtocol {
    * @param userId the user identity
    */
   case class UserGetAccount(userId: UserId)
+
+  /**
+   * The user account details
+   * @param email the user's email
+   * @param password the hashed password
+   * @param salt the salt used in hashing
+   */
+  case class Account(email: String, password: Array[Byte], salt: String)
 
   /**
    * Get the public account for the given ``userId``
