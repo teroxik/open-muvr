@@ -25,3 +25,11 @@ enrichData = function(data, windowSize, colName, f) {
   }
   data
 }
+
+# Saves data frame to csv file ``output``.
+#
+# @param output     the path of the output file
+# @param data       the data frame to output
+saveDataToCsv = function(output, data) {
+  write.table(data, file = output, row.names = FALSE, sep = ",")
+}
