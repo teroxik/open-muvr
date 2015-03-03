@@ -71,8 +71,10 @@ saveDataToCsv = function(output) {
 # (ignores sliding window).
 #
 # @param data       the input data subset
-signalVectorMagnitude = function(data) {
-  sqrt( (data[["x"]] ^ 2) + (data[["y"]] ^ 2) + (data[["z"]] ^ 2) )
+signalVectorMagnitude = function(colX = "x", colY = "y", colZ = "z") {
+  function(data) {
+    sqrt( (data[[colX]] ^ 2) + (data[[colY]] ^ 2) + (data[[colZ]] ^ 2) )
+  }
 }
 
 # Calculates moving average by column.
@@ -88,8 +90,10 @@ movingAverageByColumn = function(column) {
 # Calculates moving average.
 #
 # @param data       the input data subset
-movingAverage = function(data) {
-  mean(c(data[["x"]], data[["y"]], data[["z"]]))
+movingAverage = function(colX = "x", colY = "y", colZ = "z") {
+  function(data) {
+    mean(c(data[[colX]], data[[colY]], data[[colZ]]))
+  }
 }
 
 # Enriches data with all implemented features.
@@ -100,11 +104,11 @@ movingAverage = function(data) {
 enrichDataWithAllFeatures = function(inputFile, outputFile, windowSize) {
   inputFile %|>%
   readDataCsv %|>%
-  enrichData(1, "SVM", signalVectorMagnitude) %|>%
+  enrichData(1, "SVM", signalVectorMagnitude()) %|>%
   enrichData(windowSize, "MeanX", movingAverageByColumn("x")) %|>%
   enrichData(windowSize, "MeanY", movingAverageByColumn("y")) %|>%
   enrichData(windowSize, "MeanZ", movingAverageByColumn("z")) %|>%
-  enrichData(windowSize, "Mean", movingAverage) %|>%
+  enrichData(windowSize, "Mean", movingAverage()) %|>%
   # TODO: add more feature calculations here
   saveDataToCsv(outputFile)
   TRUE
