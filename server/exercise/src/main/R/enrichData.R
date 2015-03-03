@@ -13,6 +13,7 @@ log = TRUE
 writeLogMessage = function(message) {
   if (log) {
    write(message, stdout())
+   flush(stdout())
   }
 }
 
@@ -71,17 +72,39 @@ saveDataToCsv = function(output) {
 #
 # @param data       the input data subset
 signalVectorMagnitude = function(data) {
-  sqrt( (data["x"] ^ 2) + (data["y"] ^ 2) + (data["z"] ^ 2) )
+  sqrt( (data[["x"]] ^ 2) + (data[["y"]] ^ 2) + (data[["z"]] ^ 2) )
+}
+
+# Calculates moving average by column.
+#
+# @param column     the column name
+# @param data       the input data subset
+movingAverageByColumn = function(column) {
+  function(data) {
+    mean(data[[column]])
+  }
+}
+
+# Calculates moving average.
+#
+# @param data       the input data subset
+movingAverage = function(data) {
+  mean(c(data[["x"]], data[["y"]], data[["z"]]))
 }
 
 # Enriches data with all implemented features.
 #
 # @param inputFile      path of the input csv file
 # @param outputFile     path of the output csv file
-enrichDataWithAllFeatures = function(inputFile, outputFile) {
+# @param windowSize     the size of the sliding window
+enrichDataWithAllFeatures = function(inputFile, outputFile, windowSize) {
   inputFile %|>%
   readDataCsv %|>%
   enrichData(1, "SVM", signalVectorMagnitude) %|>%
+  enrichData(windowSize, "MeanX", movingAverageByColumn("x")) %|>%
+  enrichData(windowSize, "MeanY", movingAverageByColumn("y")) %|>%
+  enrichData(windowSize, "MeanZ", movingAverageByColumn("z")) %|>%
+  enrichData(windowSize, "Mean", movingAverage) %|>%
   # TODO: add more feature calculations here
   saveDataToCsv(outputFile)
   TRUE
