@@ -54,18 +54,19 @@ object MultiPacketToCSV extends App {
 
         for ((location, index) <- sensors.get) {
           val packets = block.packets.filter(_.sourceLocation == location)
-          val rawBlocks = block.packets.map(p => RootSensorDataDecoder(decoderSupport: _*).decodeAll(p.payload))
+          val allBlocks = block.packets.map(p => RootSensorDataDecoder(decoderSupport: _*).decodeAll(p.payload))
           // We are able to correctly decode all sensor packet blocks
-          assert(rawBlocks.forall(_.isRight))
-          val blocks = rawBlocks.map(_.toOption.get)
+          assert(allBlocks.forall(_.isRight))
+          val decodedBlocks = allBlocks.map(_.toOption.get)
+          val blocks = packets.map(p => RootSensorDataDecoder(decoderSupport: _*).decodeAll(p.payload)).map(_.toOption.get)
           // All packet blocks are non-empty
-          assert(blocks.nonEmpty && blocks.forall(_.nonEmpty))
-          val blockTime = blocks.head.head.values.length
+          assert(decodedBlocks.nonEmpty && decodedBlocks.forall(_.nonEmpty))
+          val blockTime = decodedBlocks.head.head.values.length
           // All sensor packet blocks have a common size
-          assert(blocks.forall(_.forall(_.values.length == blockTime)))
-          val samplingRate = blocks.head.head.samplingRate
+          assert(decodedBlocks.forall(_.forall(_.values.length == blockTime)))
+          val samplingRate = decodedBlocks.head.head.samplingRate
           // All sensor packet blocks have a common sampling rate
-          assert(blocks.forall(_.forall(_.samplingRate == samplingRate)))
+          assert(decodedBlocks.forall(_.forall(_.samplingRate == samplingRate)))
 
           if (packets.isEmpty) {
             // Missing sensor data detected - so we need to emit zero padding here!
