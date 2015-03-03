@@ -1,3 +1,4 @@
+library(moments)
 
 ########################################################################################################################
 #
@@ -160,6 +161,20 @@ meanAbsoluteDeviation = function(colX = "x", colY = "y", colZ = "z") {
   }
 }
 
+# Calculates mean absolute deviation by column.
+skewnessByColumn = function(column) {
+  function(data) {
+    skewness(data[[column]])
+  }
+}
+
+# Calculates mean absolute deviation.
+skewness = function(colX = "x", colY = "y", colZ = "z") {
+  function(data) {
+    skewness(c(data[[colX]], data[[colY]], data[[colZ]]))
+  }
+}
+
 # Enriches data with all implemented features.
 #
 # @param inputFile      path of the input csv file
@@ -189,6 +204,10 @@ enrichDataWithAllFeatures = function(inputFile, outputFile, windowSize) {
   enrichData(windowSize, "madY", meanAbsoluteDeviationByColumn("y")) %|>%
   enrichData(windowSize, "madZ", meanAbsoluteDeviationByColumn("z")) %|>%
   enrichData(windowSize, "mad", meanAbsoluteDeviation()) %|>%
+  enrichData(windowSize, "skewX", skewnessByColumn("x")) %|>%
+  enrichData(windowSize, "skewY", skewnessByColumn("y")) %|>%
+  enrichData(windowSize, "skewZ", skewnessByColumn("z")) %|>%
+  enrichData(windowSize, "skew", skewness()) %|>%
   # TODO: add more feature calculations here
   saveDataToCsv(outputFile)
   TRUE
