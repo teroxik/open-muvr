@@ -200,6 +200,24 @@ overallKurtosis = function(colX = "x", colY = "y", colZ = "z") {
   }
 }
 
+# Calculates Q``quartile`` by column.
+#
+# @param quartile   the quartile numer (1, 2, 3)
+quartileByColumn = function(quartile, column) {
+  function(data) {
+    quantile(data[[column]])[[quartile + 1]]
+  }
+}
+
+# Calculates quartile.
+#
+# @param quartile   the quartile numer (1, 2, 3)
+overallQuartile = function(quartile, colX = "x", colY = "y", colZ = "z") {
+  function(data) {
+    quantile(c(data[[colX]], data[[colY]], data[[colZ]]))[[quartile + 1]]
+  }
+}
+
 # Enriches data with all implemented features.
 #
 # @param inputFile      path of the input csv file
@@ -213,30 +231,52 @@ enrichDataWithAllFeatures = function(inputFile, outputFile, windowSize) {
   enrichData(windowSize, "MeanY", movingAverageByColumn("y")) %|>%
   enrichData(windowSize, "MeanZ", movingAverageByColumn("z")) %|>%
   enrichData(windowSize, "Mean", movingAverage()) %|>%
+
   enrichData(windowSize, "ssdX", simpleStandardDeviationByColumn("x")) %|>%
   enrichData(windowSize, "ssdY", simpleStandardDeviationByColumn("y")) %|>%
   enrichData(windowSize, "ssdZ", simpleStandardDeviationByColumn("z")) %|>%
   enrichData(windowSize, "ssd", simpleStandardDeviation()) %|>%
+
   enrichData(windowSize, "psdX", populationStandardDeviationByColumn("x")) %|>%
   enrichData(windowSize, "psdY", populationStandardDeviationByColumn("y")) %|>%
   enrichData(windowSize, "psdZ", populationStandardDeviationByColumn("z")) %|>%
   enrichData(windowSize, "psd", populationStandardDeviation()) %|>%
+
   enrichData(windowSize, "iqrX", interquartileRangeByColumn("x")) %|>%
   enrichData(windowSize, "iqrY", interquartileRangeByColumn("y")) %|>%
   enrichData(windowSize, "iqrZ", interquartileRangeByColumn("z")) %|>%
   enrichData(windowSize, "iqr", interquartileRange()) %|>%
+
   enrichData(windowSize, "madX", meanAbsoluteDeviationByColumn("x")) %|>%
   enrichData(windowSize, "madY", meanAbsoluteDeviationByColumn("y")) %|>%
   enrichData(windowSize, "madZ", meanAbsoluteDeviationByColumn("z")) %|>%
   enrichData(windowSize, "mad", meanAbsoluteDeviation()) %|>%
+
   enrichData(windowSize, "skewX", skewnessByColumn("x")) %|>%
   enrichData(windowSize, "skewY", skewnessByColumn("y")) %|>%
   enrichData(windowSize, "skewZ", skewnessByColumn("z")) %|>%
   enrichData(windowSize, "skew", overallSkewness()) %|>%
+
   enrichData(windowSize, "kurtX", kurtosisByColumn("x")) %|>%
   enrichData(windowSize, "kurtY", kurtosisByColumn("y")) %|>%
   enrichData(windowSize, "kurtZ", kurtosisByColumn("z")) %|>%
   enrichData(windowSize, "kurt", overallKurtosis()) %|>%
+
+  enrichData(windowSize, "q1X", quartileByColumn(1, "x")) %|>%
+  enrichData(windowSize, "q1Y", quartileByColumn(1, "y")) %|>%
+  enrichData(windowSize, "q1Z", quartileByColumn(1, "z")) %|>%
+  enrichData(windowSize, "q1", overallQuartile(1)) %|>%
+
+  enrichData(windowSize, "q2X", quartileByColumn(2, "x")) %|>%
+  enrichData(windowSize, "q2Y", quartileByColumn(2, "y")) %|>%
+  enrichData(windowSize, "q2Z", quartileByColumn(2, "z")) %|>%
+  enrichData(windowSize, "q2", overallQuartile(2)) %|>%
+
+  enrichData(windowSize, "q3X", quartileByColumn(3, "x")) %|>%
+  enrichData(windowSize, "q3Y", quartileByColumn(3, "y")) %|>%
+  enrichData(windowSize, "q3Z", quartileByColumn(3, "z")) %|>%
+  enrichData(windowSize, "q3", overallQuartile(3)) %|>%
+
   # TODO: add more feature calculations here
   saveDataToCsv(outputFile)
   TRUE
