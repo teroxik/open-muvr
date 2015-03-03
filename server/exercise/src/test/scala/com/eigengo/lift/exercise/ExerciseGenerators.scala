@@ -38,8 +38,7 @@ trait ExerciseGenerators {
       date <- arbitrary[Long].map(t => new Date(t))
       group <- listOf(arbitrary[String])
       intensity <- Gen.choose[Double](0, 1) suchThat (_ > 0)
-      classifier <- Gen.oneOf(Seq(RequestedClassification.ExplicitClassification, RequestedClassification.RandomClassification))
-    } yield SessionProperties(date, group, intensity, classifier)
+    } yield SessionProperties(date, group, intensity)
 
   // Generator ensures that `sensorData` list has information for each known sensor
   def ClassifyExerciseEvtGen(width: Int, height: Int): Gen[ClassifyExerciseEvt] =

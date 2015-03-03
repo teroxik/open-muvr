@@ -14,7 +14,7 @@ trait ExerciseService extends Directives with ExerciseMarshallers {
   import UserExercisesSessions._
   import UserExercisesStatistics._
 
-  def exerciseRoute(userExercisesProcessor: ActorRef, userExercisesSessions: ActorRef)(implicit ec: ExecutionContext) =
+  def exerciseRoute(userExercisesProcessor: ActorRef, userExercisesSessions: ActorRef, userExercisesStatistics: ActorRef)(implicit ec: ExecutionContext) =
     path("exercise" / "musclegroups") {
       get {
         complete {
@@ -99,8 +99,9 @@ trait ExerciseService extends Directives with ExerciseMarshallers {
     } ~
     path("exercise" / UserIdValue / "classification") { userId ⇒
       get {
-        // TODO: Tam, when your statistics view is done, reply here with the result
-        complete("{}")
+        complete {
+          (userExercisesStatistics ? UserExerciseExplicitClassificationExamples(userId, None)).mapTo[List[Exercise]]
+        }
       } ~
       post {
         handleWith { suggestions: Suggestions ⇒
@@ -111,7 +112,7 @@ trait ExerciseService extends Directives with ExerciseMarshallers {
     path("exercise" / UserIdValue / SessionIdValue / "classification") { (userId, sessionId) ⇒
       get {
         complete {
-          (userExercisesProcessor ? UserExerciseExplicitClassificationExamples(userId, sessionId)).mapTo[List[Exercise]]
+          (userExercisesStatistics ? UserExerciseExplicitClassificationExamples(userId, Some(sessionId))).mapTo[List[Exercise]]
         }
       } ~
       post {

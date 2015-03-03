@@ -11,19 +11,6 @@ package object exercise {
   /** Muscle group */
   type MuscleGroupKey = String
 
-  /** Requested classification */
-  type RequestedClassification = String
-
-  object RequestedClassification {
-
-    /** Random classification */
-    val RandomClassification = "RandomClassification"
-
-    /** Manual classification */
-    val ExplicitClassification = "ExplicitClassification"
-
-  }
-
   /**
    * Muscle group information
    *

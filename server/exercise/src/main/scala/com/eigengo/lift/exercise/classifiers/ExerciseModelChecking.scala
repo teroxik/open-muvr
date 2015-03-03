@@ -12,10 +12,7 @@ trait ExerciseModelChecking {
 
   def registerModelChecking(sessionProps: SessionProperties): Unit = {
     classifier.foreach(context.stop)
-    classifier = sessionProps.classification match {
-      case RandomClassification ⇒ Some(context.actorOf(UserExercisesClassifier.props(sessionProps, Props(new RandomExerciseModel(sessionProps)))))
-      case ExplicitClassification ⇒ None
-    }
+    classifier = Some(context.actorOf(UserExercisesClassifier.props(sessionProps, Props(new RandomExerciseModel(sessionProps)))))
   }
   
   def unregisterModelChecking(): Unit = {

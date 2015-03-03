@@ -1,6 +1,7 @@
 package com.eigengo.lift.exercise
 
 import akka.actor.Props
+import akka.contrib.pattern.ShardRegion
 import akka.persistence.PersistentView
 import com.eigengo.lift.common.UserId
 import com.eigengo.lift.exercise.UserExercises.{SessionEndedEvt, SessionStartedEvt, ExerciseEvt}
@@ -22,18 +23,38 @@ object UserExercisesStatistics {
     MuscleGroup(key = "cardiovascular", title = "Cardiovascular", exercises = List("running", "cycling", "swimming", "elliptical", "rowing"))
   )
 
-  case class UserExerciseExplicitClassificationExamples(userId: UserId, sessionId: SessionId)
+  /**
+   * Get the classification examples for the given user and session
+   * @param userId the user identity
+   * @param sessionId the session identity
+   */
+  case class UserExerciseExplicitClassificationExamples(userId: UserId, sessionId: Option[SessionId])
 
   /**
    * Obtain list of classification examples
    * @param sessionId the session
    */
-  private case class ExerciseExplicitClassificationExamples(sessionId: SessionId)
+  private case class ExerciseExplicitClassificationExamples(sessionId: Option[SessionId])
+
+  /**
+   * The id extractor
+   */
+  val idExtractor: ShardRegion.IdExtractor = {
+    case UserExerciseExplicitClassificationExamples(userId, sessionId) ⇒ (userId.toString, ExerciseExplicitClassificationExamples(sessionId))
+  }
+
+  /**
+   * The shard resolver
+   */
+  val shardResolver: ShardRegion.ShardResolver = {
+    case UserExerciseExplicitClassificationExamples(userId, _) ⇒ s"${userId.hashCode() % 10}"
+  }
 
 }
 
 class UserExercisesStatistics extends PersistentView {
   import scala.concurrent.duration._
+  import UserExercisesStatistics._
   private val userId = UserId(self.path.name)
 
   // we'll hang around for 360 seconds, just like the exercise sessions
@@ -44,6 +65,10 @@ class UserExercisesStatistics extends PersistentView {
 
   override val viewId: String = s"user-exercises-statistics-${userId.toString}"
   override val persistenceId: String = s"user-exercises-${userId.toString}"
+
+  lazy val queries: Receive = {
+    case ExerciseExplicitClassificationExamples(None) ⇒ sender() ! ""
+  }
 
   lazy val notExercising: Receive = {
     case SessionStartedEvt(sessionId, sessionProperties) if isPersistent ⇒

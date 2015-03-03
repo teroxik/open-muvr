@@ -5,7 +5,6 @@ import java.text.SimpleDateFormat
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestActor, TestKitBase, TestProbe}
 import com.eigengo.lift.common.UserId
-import com.eigengo.lift.exercise.RequestedClassification._
 import com.eigengo.lift.exercise.UserExercisesProcessor._
 import com.eigengo.lift.exercise.UserExercisesSessions._
 import org.scalatest.{FlatSpec, Matchers}
@@ -27,7 +26,7 @@ object ExerciseServiceTest {
     val intensity = Some(1.0)
     val startDate = dateFormat.parse("1970-01-01")
     val endDate = dateFormat.parse("1970-01-01")
-    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0, ExplicitClassification)
+    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
     val muscleGroups = List(MuscleGroup("legs", "Legs", List("squat")))
     val sessionSummary = List(SessionSummary(sessionId, sessionProps, Array(1.0)))
     val session = Some(ExerciseSession(sessionId, sessionProps, List(ExerciseSet(List(squat)))))
@@ -90,7 +89,7 @@ class ExerciseServiceTest
 
   val probe = ExerciseServiceTest.probe
 
-  val underTest = exerciseRoute(probe.ref, probe.ref)
+  val underTest = exerciseRoute(probe.ref, probe.ref, probe.ref)
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
 

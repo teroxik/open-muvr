@@ -352,7 +352,6 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
 
           saveSnapshot(newSession)
           sender() ! \/.right(newId)
-          log.info(s"ExerciseSessionStart: requested classification is ${newSessionProps.classification}")
           registerModelChecking(newSessionProps)
           context.become(exercising(newId, newSessionProps))
         }
@@ -418,7 +417,6 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
         saveSnapshot(evt)
         sender() ! \/.right(evt.sessionId)
         log.info(s"-> exercising(${evt.sessionId})")
-        log.info(s"ExerciseSessionStart: requested classification is ${sessionProps.classification}")
         registerModelChecking(sessionProps)
         context.become(exercising(evt.sessionId, sessionProps))
       }
