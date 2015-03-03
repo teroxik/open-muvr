@@ -5,11 +5,10 @@ import java.util.{Date, UUID}
 
 import akka.analytics.cassandra.JournalKey
 import com.eigengo.lift.MuscleGroups
-import com.eigengo.lift.exercise.UserExercises.ExerciseEvt
+import com.eigengo.lift.exercise.UserExercises.SessionStartedEvt
 import org.apache.spark.rdd.RDD
 
-import scala.math.BigDecimal.RoundingMode
-import scala.util.{Try, Random}
+import scala.util.Try
 
 object SuggestionPipeline {
 
@@ -24,11 +23,14 @@ object SuggestionPipeline {
   type PredictionPipeline = String => (String, DenormalizedPredictorResult)
 
   type RawInputData = RDD[(JournalKey, Any)]
-  type FilteredInputData = RDD[ExerciseEvt]
-  type NormalizedInputData = RDD[Double]
-  type Predictor = (String, NormalizedInputData, Int, Int) => PredictorResult
-  type PredictorResult = Seq[(Double, Date)]
-  type DenormalizedPredictorResult = Seq[(String, Date)]
+  type FilteredInputData = RDD[SessionStartedEvt]
+  type NormalizedInputData = RDD[(Double, Double)]
+
+  type PredictorResult = Seq[(Double, Double, Date)]
+  type DenormalizedPredictorResult = Seq[(String, Double, Date)]
+
+  def addDays(date: Date, days: Int) =
+    new Date(date.getTime + (3600000 * 24 * days))
 
   object PreProcessing {
 
@@ -36,10 +38,15 @@ object SuggestionPipeline {
       weightedMuscleGroups.find(x => x._1.exercises.contains(exercise)).head._2
 
     def preProcess(input: FilteredInputData): NormalizedInputData =
-      input.map(e => normalize(e.exercise.name))
+      input.flatMap(e => e.sessionProps.muscleGroupKeys.map(sp => (normalize(sp), e.sessionProps.intendedIntensity)))
 
     def getEligibleUsers(events: RawInputData): RDD[String] = {
       events
+        .flatMap {
+          case (k, e) if e.isInstanceOf[SessionStartedEvt] => Some((k, e.asInstanceOf[SessionStartedEvt]))
+          case _ => None
+        }
+        .filter(ke => ke._2.sessionProps.startDate.compareTo(addDays(new Date(), -1)) > 0)
         .map(_._1)
         .map(e => Try(UUID.fromString(e.persistenceId.takeRight(36))))
         .filter(_.isSuccess)
@@ -56,25 +63,14 @@ object SuggestionPipeline {
         }
         .map(_._2)
         .flatMap {
-          case e: ExerciseEvt => Some(e)
+          case e: SessionStartedEvt => Some(e)
           case _ => None
         }
-
-    def usePredictor(inputData: FilteredInputData, useHistory: Int) =
-      inputData.count() >= useHistory
-  }
-
-  object Processing {
-    def randomExercise(r: Random) =
-      weightedMuscleGroups(r.nextInt(weightedMuscleGroups.size))._2
-
-    private def randomIntensity(r: Random) =
-      BigDecimal(r.nextDouble()).setScale(2, RoundingMode.HALF_UP).toDouble
   }
 
   object PostProcessing {
     def postProcess(in: PredictorResult): DenormalizedPredictorResult =
-      in.map(d => (denormalize(d._1), d._2))
+      in.map(d => (denormalize(d._1), d._2, d._3))
 
     private def denormalize(exercise: Double): String = {
       val foundIndex = binarySearch(weightedMuscleGroups.map(_._2).toArray, exercise)

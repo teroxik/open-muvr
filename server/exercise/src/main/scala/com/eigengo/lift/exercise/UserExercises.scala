@@ -38,7 +38,7 @@ object UserExercises {
    * @param sessionId the session identity
    * @param sessionProps the session props
    */
-  case class SessionStartedEvt(sessionId: SessionId, sessionProps: SessionProperties)
+  @SerialVersionUID(1018l) case class SessionStartedEvt(sessionId: SessionId, sessionProps: SessionProperties)
 
   /**
    * The session has been abandoned. Typically, the mobile application has detected a loss of

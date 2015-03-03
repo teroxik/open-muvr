@@ -7,10 +7,10 @@ object Exercise {
   @SerialVersionUID(1113l) type ExerciseIntensity = Double
 
   /** Muscle group */
-  type MuscleGroupKey = String
+  @SerialVersionUID(1020l) type MuscleGroupKey = String
 
   /** Requested classification */
-  type RequestedClassification = String
+  @SerialVersionUID(1021l) type RequestedClassification = String
 
   /**
    * Unit of measure

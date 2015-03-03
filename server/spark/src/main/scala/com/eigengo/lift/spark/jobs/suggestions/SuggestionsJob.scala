@@ -10,12 +10,16 @@ import com.eigengo.lift.spark.jobs.Batch
 import com.eigengo.lift.spark.jobs.suggestions.SuggestionPipeline.{DenormalizedPredictorResult, RawInputData, PredictionPipeline}
 import com.eigengo.lift.spark.jobs.suggestions.SuggestionPipeline.PostProcessing._
 import com.eigengo.lift.spark.jobs.suggestions.SuggestionPipeline.PreProcessing._
-import com.eigengo.lift.spark.jobs.suggestions.SuggestionPredictor._
+import com.eigengo.lift.spark.jobs.suggestions.SuggestionPipeline._
 import com.eigengo.lift.{Suggestion, Suggestions}
 import com.typesafe.config.Config
+import org.apache.spark.mllib.classification.NaiveBayes
+import org.apache.spark.mllib.linalg.Vectors
+import org.apache.spark.mllib.regression.{LinearRegressionWithSGD, LabeledPoint}
 import org.apache.spark.{SparkConf, SparkContext}
 import spray.client.pipelining._
 import spray.http.Uri.Path
+import org.apache.spark.mllib.rdd.RDDFunctions._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -70,12 +74,39 @@ class SuggestionsJob() extends Batch[Unit, Unit] with HttpClient with ExerciseMa
   }
 
   private def pipeline(events: RawInputData, useHistory: Int, predictDays: Int): PredictionPipeline = { user =>
-    val inputData = getPredictorInputData(events, user)
+    val inputData = preProcess(getPredictorInputData(events, user))
+    val inputDataSize = inputData.count
 
-    val predictions = if (usePredictor(inputData, useHistory)) {
-      historyPredictor(user, preProcess(inputData), useHistory, predictDays)
-    } else {
-      randomPredictor(user, preProcess(inputData), useHistory, predictDays)
+    val now = new Date()
+
+    val normalizedUseHistory = Math.min(useHistory, inputDataSize.toInt)
+
+    val muscleKeyGroupsTrainingData = inputData
+      .map(_._1)
+      .sliding(normalizedUseHistory)
+      .map(exercises => LabeledPoint(exercises.head, Vectors.dense(exercises.tail)))
+
+    val intensityTrainingData = inputData
+      .map(_._2)
+      .sliding(normalizedUseHistory)
+      .map(exercises => LabeledPoint(exercises.head, Vectors.dense(exercises.tail)))
+
+    val muscleKeyGroupModel = NaiveBayes.train(muscleKeyGroupsTrainingData)
+    val intensityModel = LinearRegressionWithSGD.train(intensityTrainingData, 100)
+
+    var testData: Array[(Double, Double)] = Array()
+
+    val predictions = for (i <- 0 to predictDays - 1) yield {
+      testData = inputData
+        .zipWithIndex()
+        .filter(_._2 > inputDataSize - useHistory - 1 + i)
+        .collect()
+        .map(_._1) ++ testData.takeRight(i)
+
+      val predictedMuscleKeyGroup = muscleKeyGroupModel.predict(Vectors.dense(testData.map(_._1)))
+      val predictedIntensity = intensityModel.predict(Vectors.dense(testData.map(_._2)))
+
+      (predictedMuscleKeyGroup, predictedIntensity, addDays(now, i + 1))
     }
 
     (user, postProcess(predictions))
@@ -86,8 +117,8 @@ class SuggestionsJob() extends Batch[Unit, Unit] with HttpClient with ExerciseMa
       uri => Post(uri.withPath(Path(s"/exercise/$userId/classification")), buildSuggestions(suggestions)),
       config)
 
-  private def buildSuggestions(suggestions: Seq[(String, Date)]): Suggestions =
-    Suggestions(suggestions.map(s => buildSuggestion(s._2, s._1, 0d)).toList)
+  private def buildSuggestions(suggestions: DenormalizedPredictorResult): Suggestions =
+    Suggestions(suggestions.map(s => buildSuggestion(s._3, s._1, s._2)).toList)
 
   private def buildSuggestion(date: Date, exercise: String, intensity: Double): Suggestion =
     Session(date, Programme, Seq(exercise), intensity)
