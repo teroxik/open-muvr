@@ -144,6 +144,22 @@ interquartileRange = function(colX = "x", colY = "y", colZ = "z", type = 1) {
   }
 }
 
+# Calculates mean absolute deviation by column.
+meanAbsoluteDeviationByColumn = function(column) {
+  function(data) {
+    dataMean = mean(data[[column]])
+    mean(abs(data[[column]] - dataMean))
+  }
+}
+
+# Calculates mean absolute deviation.
+meanAbsoluteDeviation = function(colX = "x", colY = "y", colZ = "z") {
+  function(data) {
+    dataMean = mean(c(data[[colX]], data[[colY]], data[[colZ]]))
+    mean(abs(c(data[[colX]] - dataMean, data[[colY]] - dataMean, data[[colY]] - dataMean)))
+  }
+}
+
 # Enriches data with all implemented features.
 #
 # @param inputFile      path of the input csv file
@@ -169,6 +185,10 @@ enrichDataWithAllFeatures = function(inputFile, outputFile, windowSize) {
   enrichData(windowSize, "iqrY", interquartileRangeByColumn("y")) %|>%
   enrichData(windowSize, "iqrZ", interquartileRangeByColumn("z")) %|>%
   enrichData(windowSize, "iqr", interquartileRange()) %|>%
+  enrichData(windowSize, "madX", meanAbsoluteDeviationByColumn("x")) %|>%
+  enrichData(windowSize, "madY", meanAbsoluteDeviationByColumn("y")) %|>%
+  enrichData(windowSize, "madZ", meanAbsoluteDeviationByColumn("z")) %|>%
+  enrichData(windowSize, "mad", meanAbsoluteDeviation()) %|>%
   # TODO: add more feature calculations here
   saveDataToCsv(outputFile)
   TRUE
