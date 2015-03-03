@@ -78,6 +78,17 @@ signalVectorMagnitude = function(colX = "x", colY = "y", colZ = "z") {
   }
 }
 
+# Calculates a filtered data view using the SVM compared against a threshold value.
+#
+# @param column    the column name
+# @param threshold (mG) threshold value: above and we keep the column data; below and we zero the column data
+# @param SVMColumn name of the data column holding the SVM calculated result
+signalVectorMagnitudeFilter = function(column, threshold = 2000, SVMColumn = "SVM") {
+  function(data) {
+    data[[column]]*(data[[SVMColumn]] >= threshold)
+  }
+}
+
 # Calculates moving average by column.
 #
 # @param column     the column name
@@ -229,4 +240,28 @@ enrichDataWithAllFeatures = function(inputFile, outputFile, windowSize) {
   # TODO: add more feature calculations here
   saveDataToCsv(outputFile)
   TRUE
+}
+
+enrichDataWithFeatures = function(data, windowSize) {
+  data %|>%
+  enrichData(1, "SVM", signalVectorMagnitude()) %|>%
+  enrichData(windowSize, "MeanX", movingAverageByColumn("x")) %|>%
+  enrichData(windowSize, "MeanY", movingAverageByColumn("y")) %|>%
+  enrichData(windowSize, "MeanZ", movingAverageByColumn("z")) %|>%
+  enrichData(windowSize, "Mean", movingAverage()) %|>%
+  enrichData(windowSize, "ssdX", simpleStandardDeviationByColumn("x")) %|>%
+  enrichData(windowSize, "ssdY", simpleStandardDeviationByColumn("y")) %|>%
+  enrichData(windowSize, "ssdZ", simpleStandardDeviationByColumn("z")) %|>%
+  enrichData(windowSize, "ssd", simpleStandardDeviation()) %|>%
+  enrichData(windowSize, "psdX", populationStandardDeviationByColumn("x")) %|>%
+  enrichData(windowSize, "psdY", populationStandardDeviationByColumn("y")) %|>%
+  enrichData(windowSize, "psdZ", populationStandardDeviationByColumn("z")) %|>%
+  enrichData(windowSize, "psd", populationStandardDeviation()) %|>%
+  enrichData(windowSize, "iqrX", interquartileRangeByColumn("x")) %|>%
+  enrichData(windowSize, "iqrY", interquartileRangeByColumn("y")) %|>%
+  enrichData(windowSize, "iqrZ", interquartileRangeByColumn("z")) %|>%
+  enrichData(windowSize, "iqr", interquartileRange()) %|>%
+  enrichData(1, "x.filtered", signalVectorMagnitudeFilter("x")) %|>%
+  enrichData(1, "y.filtered", signalVectorMagnitudeFilter("y")) %|>%
+  enrichData(1, "z.filtered", signalVectorMagnitudeFilter("z"))
 }
