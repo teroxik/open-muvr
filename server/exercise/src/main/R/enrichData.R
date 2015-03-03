@@ -71,7 +71,7 @@ saveDataToCsv = function(output) {
 #
 # @param data       the input data subset
 signalVectorMagnitude = function(data) {
-  sqrt( (data[1, "x"] ^ 2) + (data[1, "y"] ^ 2) + (data[1, "z"] ^ 2) )
+  sqrt( (data["x"] ^ 2) + (data["y"] ^ 2) + (data["z"] ^ 2) )
 }
 
 # Enriches data with all implemented features.
