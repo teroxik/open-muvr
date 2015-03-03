@@ -1,4 +1,5 @@
 library(moments)
+library(entropy)
 
 ########################################################################################################################
 #
@@ -225,10 +226,24 @@ signalVectorAreaByColumn = function(column) {
   }
 }
 
-# Calculates quartile.
+# Calculates signal vector area.
 signalVectorArea = function(colX = "x", colY = "y", colZ = "z") {
   function(data) {
     sum(abs(c(data[[colX]], data[[colY]], data[[colZ]])))
+  }
+}
+
+# Calculates empirical entropy by column.
+entropyByColumn = function(column) {
+  function(data) {
+    entropy.empirical(data[[column]])
+  }
+}
+
+# Calculates empirical entropy.
+overallEntropy = function(colX = "x", colY = "y", colZ = "z") {
+  function(data) {
+    entropy.empirical(c(data[[colX]], data[[colY]], data[[colZ]]))
   }
 }
 
@@ -295,6 +310,11 @@ enrichDataWithAllFeatures = function(inputFile, outputFile, windowSize) {
   enrichData(windowSize, "svaY", signalVectorAreaByColumn("y")) %|>%
   enrichData(windowSize, "svaZ", signalVectorAreaByColumn("z")) %|>%
   enrichData(windowSize, "sva", signalVectorArea()) %|>%
+
+  enrichData(windowSize, "entX", entropyByColumn("x")) %|>%
+  enrichData(windowSize, "entY", entropyByColumn("y")) %|>%
+  enrichData(windowSize, "entZ", entropyByColumn("z")) %|>%
+  enrichData(windowSize, "ent", overallEntropy()) %|>%
 
   # TODO: add more feature calculations here
   saveDataToCsv(outputFile)
