@@ -218,6 +218,20 @@ overallQuartile = function(quartile, colX = "x", colY = "y", colZ = "z") {
   }
 }
 
+# Calculates signal vector area by column.
+signalVectorAreaByColumn = function(column) {
+  function(data) {
+    sum(abs(data[[column]]))
+  }
+}
+
+# Calculates quartile.
+signalVectorArea = function(colX = "x", colY = "y", colZ = "z") {
+  function(data) {
+    sum(abs(c(data[[colX]], data[[colY]], data[[colZ]])))
+  }
+}
+
 # Enriches data with all implemented features.
 #
 # @param inputFile      path of the input csv file
@@ -276,6 +290,11 @@ enrichDataWithAllFeatures = function(inputFile, outputFile, windowSize) {
   enrichData(windowSize, "q3Y", quartileByColumn(3, "y")) %|>%
   enrichData(windowSize, "q3Z", quartileByColumn(3, "z")) %|>%
   enrichData(windowSize, "q3", overallQuartile(3)) %|>%
+
+  enrichData(windowSize, "svaX", signalVectorAreaByColumn("x")) %|>%
+  enrichData(windowSize, "svaY", signalVectorAreaByColumn("y")) %|>%
+  enrichData(windowSize, "svaZ", signalVectorAreaByColumn("z")) %|>%
+  enrichData(windowSize, "sva", signalVectorArea()) %|>%
 
   # TODO: add more feature calculations here
   saveDataToCsv(outputFile)
