@@ -28,7 +28,7 @@ writeLogMessage = function(message) {
 # @param x  the value to apply to ``f``
 # @param f  the function to evaluate with ``x``
 "%|>%" = function (x, f) {
-  f(x)
+  f(force(x))
 }
 
 # Reads data frame from the provided csv file.
@@ -50,9 +50,7 @@ enrichData = function(windowSize, colName, f) {
   force(f)
   function(data) {
     writeLogMessage("Calculating " %+% colName %+% " ...")
-    for (i in windowSize:nrow(data)) {
-      data[i, colName] = f(data[(i - windowSize + 1):i,])
-    }
+    data[, colName] = apply(data, 1, f)
     data
   }
 }
@@ -75,7 +73,7 @@ saveDataToCsv = function(output) {
 # @param data       the input data subset
 signalVectorMagnitude = function(colX = "x", colY = "y", colZ = "z") {
   function(data) {
-    sqrt( (data[[colX]] ^ 2) + (data[[colY]] ^ 2) + (data[[colZ]] ^ 2) )
+    sqrt( (as.double(data[[colX]]) ^ 2) + (as.double(data[[colY]]) ^ 2) + (as.double(data[[colZ]]) ^ 2) )
   }
 }
 
@@ -86,7 +84,7 @@ signalVectorMagnitude = function(colX = "x", colY = "y", colZ = "z") {
 # @param SVMColumn name of the data column holding the SVM calculated result
 signalVectorMagnitudeFilter = function(column, threshold = 2000, SVMColumn = "SVM") {
   function(data) {
-    data[[column]]*(data[[SVMColumn]] >= threshold)
+    as.double(data[[column]])*(as.double(data[[SVMColumn]]) >= threshold)
   }
 }
 
@@ -96,7 +94,7 @@ signalVectorMagnitudeFilter = function(column, threshold = 2000, SVMColumn = "SV
 # @param data       the input data subset
 movingAverageByColumn = function(column) {
   function(data) {
-    mean(data[[column]])
+    mean(as.double(data[[column]]))
   }
 }
 
@@ -105,14 +103,14 @@ movingAverageByColumn = function(column) {
 # @param data       the input data subset
 movingAverage = function(colX = "x", colY = "y", colZ = "z") {
   function(data) {
-    mean(c(data[[colX]], data[[colY]], data[[colZ]]))
+    mean(c(as.double(data[[colX]]), as.double(data[[colY]]), as.double(data[[colZ]])))
   }
 }
 
 # Calculates simple standard deviation by column.
 simpleStandardDeviationByColumn = function(column) {
   function(data) {
-    sd(data[[column]])
+    sd(as.double(data[[column]]))
   }
 }
 
@@ -121,7 +119,7 @@ simpleStandardDeviationByColumn = function(column) {
 # @param data       the input data subset
 simpleStandardDeviation = function(colX = "x", colY = "y", colZ = "z") {
   function(data) {
-    sd(c(data[[colX]], data[[colY]], data[[colZ]]))
+    sd(c(as.double(data[[colX]]), as.double(data[[colY]]), as.double(data[[colZ]])))
   }
 }
 
@@ -129,7 +127,7 @@ simpleStandardDeviation = function(colX = "x", colY = "y", colZ = "z") {
 populationStandardDeviationByColumn = function(column) {
   function(data) {
     count = nrow(data)
-    sd(data[[column]]) * sqrt((count - 1) / count)
+    sd(as.double(data[[column]])) * sqrt((count - 1) / count)
   }
 }
 
@@ -139,65 +137,65 @@ populationStandardDeviationByColumn = function(column) {
 populationStandardDeviation = function(colX = "x", colY = "y", colZ = "z") {
   function(data) {
     count = nrow(data) * 3
-    sd(c(data[[colX]], data[[colY]], data[[colZ]])) * sqrt((count - 1) / count)
+    sd(c(as.double(data[[colX]]), as.double(data[[colY]]), as.double(data[[colZ]]))) * sqrt((count - 1) / count)
   }
 }
 
 # Calculates interquartile range by column.
 interquartileRangeByColumn = function(column, type = 1) {
   function(data) {
-    IQR(data[[column]], type = type)
+    IQR(as.double(data[[column]]), type = type)
   }
 }
 
 # Calculates interquartile range.
 interquartileRange = function(colX = "x", colY = "y", colZ = "z", type = 1) {
   function(data) {
-    IQR(c(data[[colX]], data[[colY]], data[[colZ]]), type = type)
+    IQR(c(as.double(data[[colX]]), as.double(data[[colY]]), as.double(data[[colZ]])), type = type)
   }
 }
 
 # Calculates mean absolute deviation by column.
 meanAbsoluteDeviationByColumn = function(column) {
   function(data) {
-    dataMean = mean(data[[column]])
-    mean(abs(data[[column]] - dataMean))
+    dataMean = mean(as.double(data[[column]]))
+    mean(abs(as.double(data[[column]]) - dataMean))
   }
 }
 
 # Calculates mean absolute deviation.
 meanAbsoluteDeviation = function(colX = "x", colY = "y", colZ = "z") {
   function(data) {
-    dataMean = mean(c(data[[colX]], data[[colY]], data[[colZ]]))
-    mean(abs(c(data[[colX]] - dataMean, data[[colY]] - dataMean, data[[colY]] - dataMean)))
+    dataMean = mean(c(as.double(data[[colX]]), as.double(data[[colY]]), as.double(data[[colZ]])))
+    mean(abs(c(as.double(data[[colX]]) - dataMean, as.double(data[[colY]]) - dataMean, as.double(data[[colY]]) - dataMean)))
   }
 }
 
 # Calculates skewness by column.
 skewnessByColumn = function(column) {
   function(data) {
-    skewness(data[[column]])
+    skewness(as.double(data[[column]]))
   }
 }
 
 # Calculates skewness.
 overallSkewness = function(colX = "x", colY = "y", colZ = "z") {
   function(data) {
-    skewness(c(data[[colX]], data[[colY]], data[[colZ]]))
+    skewness(c(as.double(data[[colX]]), as.double(data[[colY]]), as.double(data[[colZ]])))
   }
 }
 
 # Calculates kurtosis by column.
 kurtosisByColumn = function(column) {
   function(data) {
-    kurtosis(data[[column]])
+    kurtosis(as.double(data[[column]]))
   }
 }
 
 # Calculates kurtosis.
 overallKurtosis = function(colX = "x", colY = "y", colZ = "z") {
   function(data) {
-    kurtosis(c(data[[colX]], data[[colY]], data[[colZ]]))
+    kurtosis(c(as.double(data[[colX]]), as.double(data[[colY]]), as.double(data[[colZ]])))
   }
 }
 
@@ -206,7 +204,7 @@ overallKurtosis = function(colX = "x", colY = "y", colZ = "z") {
 # @param quartile   the quartile numer (1, 2, 3)
 quartileByColumn = function(quartile, column) {
   function(data) {
-    quantile(data[[column]])[[quartile + 1]]
+    quantile(as.double(data[[column]]))[[quartile + 1]]
   }
 }
 
@@ -215,35 +213,35 @@ quartileByColumn = function(quartile, column) {
 # @param quartile   the quartile numer (1, 2, 3)
 overallQuartile = function(quartile, colX = "x", colY = "y", colZ = "z") {
   function(data) {
-    quantile(c(data[[colX]], data[[colY]], data[[colZ]]))[[quartile + 1]]
+    quantile(c(as.double(data[[colX]]), as.double(data[[colY]]), as.double(data[[colZ]])))[[quartile + 1]]
   }
 }
 
 # Calculates signal vector area by column.
 signalVectorAreaByColumn = function(column) {
   function(data) {
-    sum(abs(data[[column]]))
+    sum(abs(as.double(data[[column]])))
   }
 }
 
 # Calculates signal vector area.
 signalVectorArea = function(colX = "x", colY = "y", colZ = "z") {
   function(data) {
-    sum(abs(c(data[[colX]], data[[colY]], data[[colZ]])))
+    sum(abs(c(as.double(data[[colX]]), as.double(data[[colY]]), as.double(data[[colZ]]))))
   }
 }
 
 # Calculates empirical entropy by column.
 entropyByColumn = function(column) {
   function(data) {
-    entropy.empirical(data[[column]])
+    entropy.empirical(as.double(data[[column]]))
   }
 }
 
 # Calculates empirical entropy.
 overallEntropy = function(colX = "x", colY = "y", colZ = "z") {
   function(data) {
-    entropy.empirical(c(data[[colX]], data[[colY]], data[[colZ]]))
+    entropy.empirical(c(as.double(data[[colX]]), as.double(data[[colY]]), as.double(data[[colZ]])))
   }
 }
 
@@ -321,26 +319,74 @@ enrichDataWithAllFeatures = function(inputFile, outputFile, windowSize) {
   TRUE
 }
 
+# Enriches data with all implemented features.
+#
+# @param data       data frame that is to be enriched
+# @param windowSize the size of the sliding window
 enrichDataWithFeatures = function(data, windowSize) {
   data %|>%
   enrichData(1, "SVM", signalVectorMagnitude()) %|>%
-  enrichData(windowSize, "MeanX", movingAverageByColumn("x")) %|>%
-  enrichData(windowSize, "MeanY", movingAverageByColumn("y")) %|>%
-  enrichData(windowSize, "MeanZ", movingAverageByColumn("z")) %|>%
-  enrichData(windowSize, "Mean", movingAverage()) %|>%
-  enrichData(windowSize, "ssdX", simpleStandardDeviationByColumn("x")) %|>%
-  enrichData(windowSize, "ssdY", simpleStandardDeviationByColumn("y")) %|>%
-  enrichData(windowSize, "ssdZ", simpleStandardDeviationByColumn("z")) %|>%
-  enrichData(windowSize, "ssd", simpleStandardDeviation()) %|>%
-  enrichData(windowSize, "psdX", populationStandardDeviationByColumn("x")) %|>%
-  enrichData(windowSize, "psdY", populationStandardDeviationByColumn("y")) %|>%
-  enrichData(windowSize, "psdZ", populationStandardDeviationByColumn("z")) %|>%
-  enrichData(windowSize, "psd", populationStandardDeviation()) %|>%
-  enrichData(windowSize, "iqrX", interquartileRangeByColumn("x")) %|>%
-  enrichData(windowSize, "iqrY", interquartileRangeByColumn("y")) %|>%
-  enrichData(windowSize, "iqrZ", interquartileRangeByColumn("z")) %|>%
-  enrichData(windowSize, "iqr", interquartileRange()) %|>%
   enrichData(1, "x.filtered", signalVectorMagnitudeFilter("x")) %|>%
   enrichData(1, "y.filtered", signalVectorMagnitudeFilter("y")) %|>%
-  enrichData(1, "z.filtered", signalVectorMagnitudeFilter("z"))
+  enrichData(1, "z.filtered", signalVectorMagnitudeFilter("z")) %|>%
+
+  enrichData(windowSize, "MeanX", movingAverageByColumn("x.filtered")) %|>%
+  enrichData(windowSize, "MeanY", movingAverageByColumn("y.filtered")) %|>%
+  enrichData(windowSize, "MeanZ", movingAverageByColumn("z.filtered")) %|>%
+  enrichData(windowSize, "Mean", movingAverage("x.filtered", "y.filtered", "z.filtered")) %|>%
+
+  enrichData(windowSize, "ssdX", simpleStandardDeviationByColumn("x.filtered")) %|>%
+  enrichData(windowSize, "ssdY", simpleStandardDeviationByColumn("y.filtered")) %|>%
+  enrichData(windowSize, "ssdZ", simpleStandardDeviationByColumn("z.filtered")) %|>%
+  enrichData(windowSize, "ssd", simpleStandardDeviation("x.filtered", "y.filtered", "z.filtered")) %|>%
+
+  enrichData(windowSize, "psdX", populationStandardDeviationByColumn("x.filtered")) %|>%
+  enrichData(windowSize, "psdY", populationStandardDeviationByColumn("y.filtered")) %|>%
+  enrichData(windowSize, "psdZ", populationStandardDeviationByColumn("z.filtered")) %|>%
+  enrichData(windowSize, "psd", populationStandardDeviation("x.filtered", "y.filtered", "z.filtered")) %|>%
+
+  enrichData(windowSize, "iqrX", interquartileRangeByColumn("x.filtered")) %|>%
+  enrichData(windowSize, "iqrY", interquartileRangeByColumn("y.filtered")) %|>%
+  enrichData(windowSize, "iqrZ", interquartileRangeByColumn("z.filtered")) %|>%
+  enrichData(windowSize, "iqr", interquartileRange("x.filtered", "y.filtered", "z.filtered")) %|>%
+
+  enrichData(windowSize, "madX", meanAbsoluteDeviationByColumn("x.filtered")) %|>%
+  enrichData(windowSize, "madY", meanAbsoluteDeviationByColumn("y.filtered")) %|>%
+  enrichData(windowSize, "madZ", meanAbsoluteDeviationByColumn("z.filtered")) %|>%
+  enrichData(windowSize, "mad", meanAbsoluteDeviation("x.filtered", "y.filtered", "z.filtered")) %|>%
+
+  enrichData(windowSize, "skewX", skewnessByColumn("x.filtered")) %|>%
+  enrichData(windowSize, "skewY", skewnessByColumn("y.filtered")) %|>%
+  enrichData(windowSize, "skewZ", skewnessByColumn("z.filtered")) %|>%
+  enrichData(windowSize, "skew", overallSkewness("x.filtered", "y.filtered", "z.filtered")) %|>%
+
+  enrichData(windowSize, "kurtX", kurtosisByColumn("x.filtered")) %|>%
+  enrichData(windowSize, "kurtY", kurtosisByColumn("y.filtered")) %|>%
+  enrichData(windowSize, "kurtZ", kurtosisByColumn("z.filtered")) %|>%
+  enrichData(windowSize, "kurt", overallKurtosis("x.filtered", "y.filtered", "z.filtered")) %|>%
+
+  enrichData(windowSize, "q1X", quartileByColumn(1, "x.filtered")) %|>%
+  enrichData(windowSize, "q1Y", quartileByColumn(1, "y.filtered")) %|>%
+  enrichData(windowSize, "q1Z", quartileByColumn(1, "z.filtered")) %|>%
+  enrichData(windowSize, "q1", overallQuartile(1, "x.filtered", "y.filtered", "z.filtered")) %|>%
+
+  enrichData(windowSize, "q2X", quartileByColumn(2, "x.filtered")) %|>%
+  enrichData(windowSize, "q2Y", quartileByColumn(2, "y.filtered")) %|>%
+  enrichData(windowSize, "q2Z", quartileByColumn(2, "z.filtered")) %|>%
+  enrichData(windowSize, "q2", overallQuartile(2, "x.filtered", "y.filtered", "z.filtered")) %|>%
+
+  enrichData(windowSize, "q3X", quartileByColumn(3, "x.filtered")) %|>%
+  enrichData(windowSize, "q3Y", quartileByColumn(3, "y.filtered")) %|>%
+  enrichData(windowSize, "q3Z", quartileByColumn(3, "z.filtered")) %|>%
+  enrichData(windowSize, "q3", overallQuartile(3, "x.filtered", "y.filtered", "z.filtered")) %|>%
+
+  enrichData(windowSize, "svaX", signalVectorAreaByColumn("x.filtered")) %|>%
+  enrichData(windowSize, "svaY", signalVectorAreaByColumn("y.filtered")) %|>%
+  enrichData(windowSize, "svaZ", signalVectorAreaByColumn("z.filtered")) %|>%
+  enrichData(windowSize, "sva", signalVectorArea("x.filtered", "y.filtered", "z.filtered")) %|>%
+
+  enrichData(windowSize, "entX", entropyByColumn("x.filtered")) %|>%
+  enrichData(windowSize, "entY", entropyByColumn("y.filtered")) %|>%
+  enrichData(windowSize, "entZ", entropyByColumn("z.filtered")) %|>%
+  enrichData(windowSize, "ent", overallEntropy("x.filtered", "y.filtered", "z.filtered"))
 }
