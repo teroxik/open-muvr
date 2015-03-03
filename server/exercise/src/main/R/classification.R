@@ -107,50 +107,44 @@ extractFeatures = function(inputList, size, tag, inc = 10) {
 #
 # Example R session:
 #
-# > library(dygraph)
-# > size = 25
-# > rawData = read.csv(file="FILENAME.csv", header=TRUE)
-# > data = subset(rawData, location == "wrist.2")
-# > dygraph(ts(data["x"]))
-# > write.table(data[,c("x","y","z")], file="TAG.csv", sep=",", row.names=FALSE, col.names=FALSE)
+# > library(dygraphs)
+# > data = read.csv(file="FILENAME.csv", header=TRUE)
+# > dygraph(ts(subset(data, location == "wrist.0")["x"]))
 # >
-# > ## Now we may generate start/end indexes for INDEX.csv
+# > ## Now we may manually generate start/end indexes for INDEX.csv
 # >
-# > extractFeaturesWithTagFile("TAG.csv", "INDEX.csv", size, "TAG")
+# > extractFeaturesWithTagFile(data, c("x", "y", "z"), "INDEX.csv", 25, "TAG")
 # >
 # > ## Now we train our SVM
 # > 
-# > trainSVM("TAG", size)
+# > trainSVM("TAG")
 # >
 # > ## Current directory should now contain a trained SVM!
 #
-# @param input    CSV file name holding accelerometer data
+# @param data     data frame that contains our feature vector values
+# @param labels   column labels of `data` that are to be used as our feature vector
 # @param tagInput CSV file name holding start and end indexes for data that is to be tagged
-# @param size     size of sampling window
+# @param size     size of sampling window (that is moved over `data` frame)
 # @param tag      used to tag (user) classified data with
 # @param inc      increment by which we move sampling window (default is 10 events)
-extractFeaturesWithTagFile = function(input, tagInput, size, tag, inc=10) {
-  csv = read.csv(file=input, col.names=c("x", "y", "z"), header=FALSE)
+extractFeaturesWithTagFile = function(data, labels, tagInput, size, tag, inc=10) {
   tagIndex = read.csv(file=tagInput, col.names=c("start", "end"), header=FALSE)
-  windowSize = min(size, tagIndex[,"end"] - tagIndex[,"start"])
-  xLabels = lapply(rep(1:windowSize), function(index) { paste("x", index, sep="") })
-  yLabels = lapply(rep(1:windowSize), function(index) { paste("y", index, sep="") })
-  zLabels = lapply(rep(1:windowSize), function(index) { paste("z", index, sep="") })
 
   result = NULL
-  for (window in windowSampling(csv, windowSize, inc)) {
+  for (window in windowSampling(data, size, inc)) {
     startIndex = as.integer(window[1])
     endIndex = as.integer(window[2])
-    windowData = csv[startIndex:endIndex,]
+    windowData = data[startIndex:endIndex,labels]
+    # We use a DCT to normalise data for training
     feature = as.data.frame(mvdct(as.matrix(windowData)))
     taggedFeature = if (nrow(subset(tagIndex, start <= startIndex & endIndex <= end)) > 0) {
       print(paste("Tagging:", startIndex, "-", endIndex))
-      data.frame(c(tag, t(feature["x"]), t(feature["y"]), t(feature["z"])))
+      data.frame(c(tag, t(feature)))
     } else {
-      data.frame(c("", t(feature["x"]), t(feature["y"]), t(feature["z"])))
+      data.frame(c("", t(feature)))
     }
     names(taggedFeature) = c("feature")
-    row.names(taggedFeature) = c("tag", xLabels, yLabels, zLabels)
+    row.names(taggedFeature) = c("tag", sapply(labels, function(l) { sapply(0:(size-1), function(n) { paste(l, ".", n, sep="") }) }))
 
     rbind(result, t(taggedFeature)) -> result
   }
@@ -195,18 +189,23 @@ parameterCost = function(tag, data, testData, buckets, costParam, gammaParam) {
 
 # Function used to train a support vector machine (SVM). Trained SVM model is saved to a file.
 #
-# @param tag        tag that data has been (potentially) labeled with (for training)
-# @param size       size of sampling window
-# @param buckets    number of buckets or folds to be used
-# @param repeats    how many attempts at fitting a model for a given cost and gamma parameter
+# @param tag         tag that data has been (potentially) labeled with (for training)
+# @param sizeOpt     size of sampling window (x, y, z co-ordinates) or, if NULL, the explicit labels for the data are present in the CSV file headers
+# @param buckets     number of buckets or folds to be used
+# @param repeats     how many attempts at fitting a model for a given cost and gamma parameter
 # @param costParam
 # @param gammaParam
-trainSVM = function(tag, size, buckets = 10, repeats = 10, costParams = 10^(0:4), gammaParams = 10^(0:-4)) {
-  data = read.csv(file=paste("svm", "-", tag, "-features", ".csv", sep=""), header=FALSE)
-  xLabels = lapply(rep(1:size), function(index) { paste("x", index, sep="") })
-  yLabels = lapply(rep(1:size), function(index) { paste("y", index, sep="") })
-  zLabels = lapply(rep(1:size), function(index) { paste("z", index, sep="") })
-  names(data) = c("tag", xLabels, yLabels, zLabels)
+trainSVM = function(tag, sizeOpt = NULL, buckets = 10, repeats = 10, costParams = 10^(0:4), gammaParams = 10^(0:-4)) {
+  if (is.null(sizeOpt)) {
+    data = read.csv(file=paste("svm", "-", tag, "-features", ".csv", sep=""), header=TRUE)
+  } else {
+    size = sizeOpt
+    xLabels = lapply(rep(1:size), function(index) { paste("x", index, sep="") })
+    yLabels = lapply(rep(1:size), function(index) { paste("y", index, sep="") })
+    zLabels = lapply(rep(1:size), function(index) { paste("z", index, sep="") })
+    data = read.csv(file=paste("svm", "-", tag, "-features", ".csv", sep=""), header=FALSE)
+    names(data) = c("tag", xLabels, yLabels, zLabels)
+  }
 
   sampleSize = nrow(data)
 
