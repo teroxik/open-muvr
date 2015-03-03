@@ -7,7 +7,7 @@ import akka.stream.{ActorFlowMaterializer, ActorFlowMaterializerSettings}
 import akka.stream.scaladsl._
 import akka.testkit.{TestKit, TestProbe, TestActorRef}
 import com.eigengo.lift.exercise.UserExercises.ModelMetadata
-import com.eigengo.lift.exercise.UserExercisesClassifier.{ClassifiedExercise, NoExercise, Tap}
+import com.eigengo.lift.exercise.UserExercisesClassifier.{Tap, NoExercise}
 import com.eigengo.lift.exercise._
 import com.eigengo.lift.exercise.RequestedClassification._
 import com.eigengo.lift.exercise.classifiers.model.provers.CVC4

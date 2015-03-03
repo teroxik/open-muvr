@@ -429,15 +429,7 @@ public class LiftServer {
         request(LiftServerURLs.ExplicitExerciseClassificationStart(userId, sessionId))
             .responseAsResult(asu(), f, const(()))
     }
-    
-    ///
-    /// Submit data for a marked exerise to the server
-    ///
-    func exerciseSessionMarkExplicitClassification(userId: NSUUID, sessionId: NSUUID, exercise: Exercise.Exercise, f: Result<Void> -> Void) -> Void {
-        request(LiftServerURLs.ExplicitExerciseClassificationMark(userId, sessionId), body: .Json(params: exercise.marshal()))
-            .responseAsResult(asu(), f, const(()))
-    }
-        
+            
     ///
     /// Finish saving data for the explicit exercise
     ///

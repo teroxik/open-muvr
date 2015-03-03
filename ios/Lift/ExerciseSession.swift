@@ -46,13 +46,6 @@ class ExerciseSession : NSObject {
     }
     
     ///
-    /// Mark an exercise
-    ///
-    func markExerciseExplicit(exercise: Exercise.Exercise, f: Result<Void> -> Void) -> Void {
-        LiftServer.sharedInstance.exerciseSessionMarkExplicitClassification(CurrentLiftUser.userId!, sessionId: id, exercise: exercise, f: f)
-    }
-    
-    ///
     /// End explicit classification
     ///
     func endExplicitClassification() {

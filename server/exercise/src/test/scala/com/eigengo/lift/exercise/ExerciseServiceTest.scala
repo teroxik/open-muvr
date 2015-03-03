@@ -5,13 +5,11 @@ import java.text.SimpleDateFormat
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestActor, TestKitBase, TestProbe}
 import com.eigengo.lift.common.UserId
-import com.eigengo.lift.exercise.UserExercisesClassifier.MuscleGroup
 import com.eigengo.lift.exercise.RequestedClassification._
 import com.eigengo.lift.exercise.UserExercisesProcessor._
 import com.eigengo.lift.exercise.UserExercisesSessions._
 import org.scalatest.{FlatSpec, Matchers}
-import spray.http.{HttpRequest, ContentTypes, HttpEntity}
-import spray.httpx.marshalling.BasicMarshallers
+import spray.http.{ContentTypes, HttpEntity}
 import spray.testkit.ScalatestRouteTest
 
 import scalaz._
@@ -68,9 +66,6 @@ object ExerciseServiceTest {
           case UserExerciseExplicitClassificationStart(_, _, _) =>
             sender ! List(TestData.squatName)
             TestActor.KeepRunning
-          case UserExerciseExplicitClassificationMark(_, _, _) =>
-            sender ! List(TestData.squat)
-            TestActor.KeepRunning
           case UserExerciseSetSuggestions(_, _) ⇒
             sender ! \/.right(())
             TestActor.KeepRunning
@@ -101,7 +96,7 @@ class ExerciseServiceTest
 
   "The Exercise service" should "listen at GET /exercise/musclegroups endpoint" in {
     Get("/exercise/musclegroups") ~> underTest ~> check {
-      responseAs[List[MuscleGroup]] should be(UserExercisesClassifier.supportedMuscleGroups)
+      responseAs[List[MuscleGroup]] should be(UserExercisesStatistics.supportedMuscleGroups)
     }
   }
 
@@ -204,14 +199,6 @@ class ExerciseServiceTest
     }
 
     probe.expectMsg(UserExerciseExplicitClassificationStart(TestData.userId, TestData.sessionId, TestData.squatName))
-  }
-
-  it should "listen at PUT exercise/:UserIdValue/:SessionIdValue/classification endpoint" in {
-    Put(s"/exercise/${TestData.userId.id}/${TestData.sessionId.id}/classification", TestData.squat) ~> underTest ~> check {
-      response.entity.asString should be(TestData.emptyResponse)
-    }
-
-    probe.expectMsg(UserExerciseExplicitClassificationMark(TestData.userId, TestData.sessionId, TestData.squat))
   }
 
 }

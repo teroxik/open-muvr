@@ -6,7 +6,7 @@ import Foundation
 ///
 protocol LiveSessionClassificationTagDelegate {
     
-    func doneTagging(exercise: Exercise.Exercise, intensity: Exercise.ExerciseIntensityKey, repetition: Int)
+    //func doneTagging(exercise: Exercise.Exercise, intensity: Exercise.ExerciseIntensityKey, repetition: Int)
     
 }
 
@@ -106,7 +106,7 @@ class LiveSessionTagView : UIView {
     
     @IBAction
     func done(sender: UIButton) {
-        delegate?.doneTagging(exercise, intensity: selectedIntensity, repetition: selectedRepetition)
+        //delegate?.doneTagging(exercise, intensity: selectedIntensity, repetition: selectedRepetition)
     }
     
 }
@@ -204,10 +204,10 @@ class LiveSessionClassificationController : UITableViewController, ExerciseSessi
     }
     
     // MARK: LiveSessionClassificationTagDelegate code
-    
-    private func sendClassification(actualExercise: Exercise.Exercise, count: Int) {
+    /*
+    private func sendClassification(exercise: Exercise.Exercise, count: Int) {
         if count > 0 {
-            session.markExerciseExplicit(actualExercise) { _ in self.sendClassification(actualExercise, count: count - 1) }
+            session.startExplicitClassification(exercise) { _ in self.sendClassification(actualExercise, count: count - 1) }
         } else {
             session.endExplicitClassification()
         }
@@ -221,5 +221,5 @@ class LiveSessionClassificationController : UITableViewController, ExerciseSessi
         tagView.hidden = true
         tableView.reloadData()
     }
-    
+    */
 }

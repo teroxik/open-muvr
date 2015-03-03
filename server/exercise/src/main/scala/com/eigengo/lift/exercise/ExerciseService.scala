@@ -3,8 +3,6 @@ package com.eigengo.lift.exercise
 import java.util.{Date, UUID}
 
 import akka.actor.ActorRef
-import com.eigengo.lift.exercise.UserExercisesProcessor._
-import com.eigengo.lift.exercise.UserExercisesSessions._
 import spray.routing.Directives
 
 import scala.concurrent.ExecutionContext
@@ -12,12 +10,15 @@ import scala.concurrent.ExecutionContext
 trait ExerciseService extends Directives with ExerciseMarshallers {
   import akka.pattern.ask
   import com.eigengo.lift.common.Timeouts.defaults._
+  import UserExercisesProcessor._
+  import UserExercisesSessions._
+  import UserExercisesStatistics._
 
   def exerciseRoute(userExercisesProcessor: ActorRef, userExercisesSessions: ActorRef)(implicit ec: ExecutionContext) =
     path("exercise" / "musclegroups") {
       get {
         complete {
-          UserExercisesClassifier.supportedMuscleGroups
+          UserExercisesStatistics.supportedMuscleGroups
         }
       }
     } ~
@@ -119,12 +120,6 @@ trait ExerciseService extends Directives with ExerciseMarshallers {
             userExercisesProcessor ! UserExerciseExplicitClassificationStart(userId, sessionId, exerciseName)
             ()
           }
-        }
-      } ~
-      put {
-        handleWith { exercise: Exercise ⇒
-          userExercisesProcessor ! UserExerciseExplicitClassificationMark(userId, sessionId, exercise)
-          ()
         }
       } ~
       delete {

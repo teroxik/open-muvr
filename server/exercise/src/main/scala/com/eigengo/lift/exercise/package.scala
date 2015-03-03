@@ -25,6 +25,15 @@ package object exercise {
   }
 
   /**
+   * Muscle group information
+   *
+   * @param key the key
+   * @param title the title
+   * @param exercises the suggested exercises
+   */
+  case class MuscleGroup(key: String, title: String, exercises: List[String])
+
+  /**
    * Adds much greater than and much less than operators to ``ExerciseIntensity`` instances
    * @param intensity the wrapped intensity
    */

@@ -270,12 +270,6 @@ class ManagedExerciseSession : ExerciseSession {
         }
     }
     
-    override func markExerciseExplicit(exercise: Exercise.Exercise, f: Result<Void> -> Void) -> Void {
-        if !isOffline {
-            managedSession.markExerciseExplicit(exercise, f: f)
-        }
-    }
-    
     override func endExplicitClassification() -> Void {
         if !isOffline {
             managedSession.endExplicitClassification()
