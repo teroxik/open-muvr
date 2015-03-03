@@ -161,17 +161,31 @@ meanAbsoluteDeviation = function(colX = "x", colY = "y", colZ = "z") {
   }
 }
 
-# Calculates mean absolute deviation by column.
+# Calculates skewness by column.
 skewnessByColumn = function(column) {
   function(data) {
     skewness(data[[column]])
   }
 }
 
-# Calculates mean absolute deviation.
-skewness = function(colX = "x", colY = "y", colZ = "z") {
+# Calculates skewness.
+overallSkewness = function(colX = "x", colY = "y", colZ = "z") {
   function(data) {
     skewness(c(data[[colX]], data[[colY]], data[[colZ]]))
+  }
+}
+
+# Calculates kurtosis by column.
+kurtosisByColumn = function(column) {
+  function(data) {
+    kurtosis(data[[column]])
+  }
+}
+
+# Calculates kurtosis.
+overallKurtosis = function(colX = "x", colY = "y", colZ = "z") {
+  function(data) {
+    kurtosis(c(data[[colX]], data[[colY]], data[[colZ]]))
   }
 }
 
@@ -207,7 +221,11 @@ enrichDataWithAllFeatures = function(inputFile, outputFile, windowSize) {
   enrichData(windowSize, "skewX", skewnessByColumn("x")) %|>%
   enrichData(windowSize, "skewY", skewnessByColumn("y")) %|>%
   enrichData(windowSize, "skewZ", skewnessByColumn("z")) %|>%
-  enrichData(windowSize, "skew", skewness()) %|>%
+  enrichData(windowSize, "skew", overallSkewness()) %|>%
+  enrichData(windowSize, "kurtX", kurtosisByColumn("x")) %|>%
+  enrichData(windowSize, "kurtY", kurtosisByColumn("y")) %|>%
+  enrichData(windowSize, "kurtZ", kurtosisByColumn("z")) %|>%
+  enrichData(windowSize, "kurt", overallKurtosis()) %|>%
   # TODO: add more feature calculations here
   saveDataToCsv(outputFile)
   TRUE
