@@ -8,12 +8,12 @@ object UserExercises {
    * Model version and other metadata
    * @param version the model version
    */
-  case class ModelMetadata(version: Int)
+  @SerialVersionUID(1000l) case class ModelMetadata(version: Int)
 
   /**
    * The MD companion
    */
-  object ModelMetadata {
+  @SerialVersionUID(1001l) object ModelMetadata {
     /** Special user-classified metadata */
     val user = ModelMetadata(-1231344)
   }
@@ -78,7 +78,7 @@ object UserExercises {
    * @param metadata the model metadata
    * @param exercise the result
    */
-  case class ExerciseEvt(sessionId: SessionId, metadata: ModelMetadata, exercise: Exercise)
+  @SerialVersionUID(1002l) case class ExerciseEvt(sessionId: SessionId, metadata: ModelMetadata, exercise: Exercise)
 
   /**
    * Explicit (user-provided through tapping the device, for example) of exercise set.

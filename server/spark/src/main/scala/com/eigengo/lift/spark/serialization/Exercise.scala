@@ -2,9 +2,9 @@ package com.eigengo.lift
 
 object Exercise {
   /** The exercise */
-  type ExerciseName = String
+  @SerialVersionUID(1112l) type ExerciseName = String
   /** The exercise intensity 0..1 */
-  type ExerciseIntensity = Double
+  @SerialVersionUID(1113l) type ExerciseIntensity = Double
 
   /** Muscle group */
   type MuscleGroupKey = String
@@ -15,23 +15,23 @@ object Exercise {
   /**
    * Unit of measure
    */
-  sealed trait MetricUnit
+  @SerialVersionUID(1003l) sealed trait MetricUnit
 
   /**
    * All mass units of measure
    */
-  object Mass {
+  @SerialVersionUID(1004l) object Mass {
     /// kg
-    case object Kilogram extends MetricUnit
+    @SerialVersionUID(1005l) case object Kilogram extends MetricUnit
     // pound
   }
 
   /**
    * All distance units of measure
    */
-  object Distance {
+  @SerialVersionUID(1006l) object Distance {
     /// km
-    case object Kilometre extends MetricUnit
+    @SerialVersionUID(1007l) case object Kilometre extends MetricUnit
 
     // but can also include strange units like case object PoolLength
   }
@@ -41,7 +41,7 @@ object Exercise {
    * @param value the value
    * @param metricUnit the unit
    */
-  case class Metric(value: Double, metricUnit: MetricUnit)
+  @SerialVersionUID(1008l) case class Metric(value: Double, metricUnit: MetricUnit)
 
   /**
    * A single recorded exercise
@@ -50,5 +50,5 @@ object Exercise {
    * @param intensity the intensity, if known
    * @param metric the metric
    */
-  case class Exercise(name: ExerciseName, intensity: Option[Double], metric: Option[Metric])
+  @SerialVersionUID(1009l) case class Exercise(name: ExerciseName, intensity: Option[Double], metric: Option[Metric])
 }

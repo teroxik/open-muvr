@@ -27,7 +27,7 @@ object UserProfileProtocol {
    * @param password the hashed password
    * @param salt the salt used in hashing
    */
-  case class Account(email: String, password: Array[Byte], salt: String)
+  @SerialVersionUID(1017l) case class Account(email: String, password: Array[Byte], salt: String)
 
   /**
    * Get the public account for the given ``userId``

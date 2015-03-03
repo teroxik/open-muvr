@@ -6,10 +6,11 @@ import java.util.{Date, UUID}
  * The session identity
  * @param id the id
  */
-case class SessionId(id: UUID) extends AnyVal {
+@SerialVersionUID(1010l) case class SessionId(id: UUID) extends AnyVal {
   override def toString = id.toString
 }
-object SessionId {
+
+@SerialVersionUID(1011l) object SessionId {
   def apply(s: String): SessionId = SessionId(UUID.fromString(s))
   def randomId(): SessionId = SessionId(UUID.randomUUID())
 }

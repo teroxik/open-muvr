@@ -38,7 +38,7 @@ object UserProfile {
    * @param userId the user to be added
    * @param account the user account
    */
-  case class UserRegistered(userId: UserId, account: Account)
+  @SerialVersionUID(1014l) case class UserRegistered(userId: UserId, account: Account)
 
   /**
    * Sets the user's device
