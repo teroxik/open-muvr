@@ -21,11 +21,11 @@ object UserExercisesStatistics {
     MuscleGroup(key = "shoulders", title = "Shoulders", exercises = List("shoulder press", "lateral raise", "front raise", "rear raise", "upright row", "shrug")),
     MuscleGroup(key = "cardiovascular", title = "Cardiovascular", exercises = List("running", "cycling", "swimming", "elliptical", "rowing"))
   )
-
-  // Map[MuscleGroupKey, Map[Intensity, List[(ExerciseName, Count)]]]
+  // all exercises
+  val allExercises: List[Exercise] = supportedMuscleGroups.flatMap(_.exercises).map(name ⇒ Exercise(name, None, None))
 
   object ExerciseStatistics {
-    private case class Entry(key: MuscleGroupKey, intendedIntensity: ExerciseIntensity, count: Int, exercise: Exercise) {
+    case class Entry(key: MuscleGroupKey, intendedIntensity: ExerciseIntensity, count: Int, exercise: Exercise) {
       def inc(): Entry = copy(count = count + 1)
 
       def matches(sessionProperties: SessionProperties, exercise: Exercise): Boolean = {
@@ -43,10 +43,7 @@ object UserExercisesStatistics {
       }
     }
 
-//    type ExerciseCount = (Int, Exercise)
-//    type MuscleGroupValue = Map[ExerciseIntensity, List[ExerciseCount]]
-//    type Statistics = Map[MuscleGroupKey, MuscleGroupValue]
-
+    /** Empty ExerciseStatistics */
     val empty: ExerciseStatistics = ExerciseStatistics(List.empty)
   }
 
@@ -57,19 +54,47 @@ object UserExercisesStatistics {
   case class ExerciseStatistics(statistics: List[ExerciseStatistics.Entry]) {
     import ExerciseStatistics._
 
+    /**
+     * Compute the exerises ordered by their counts, with intensity set to average intensity in the set
+     * identified by the filter
+     * @param filter the filtering function
+     * @return the exercises, ordered by count
+     */
     private def examples(filter: Entry ⇒ Boolean): List[Exercise] = {
-      statistics.filter(filter).groupBy(_.exercise.name).map {
-        case (name, entries) ⇒
-          Exercise(name, Some(entries.map(_.exercise.intensity.getOrElse(0.5)).sum / entries.size), None)
+      val userExercises = statistics.filter(filter).sortBy(_.count).groupBy(_.exercise.name).map {
+        case (name, entries) ⇒ Exercise(name, Some(entries.map(_.exercise.intensity.getOrElse(0.5)).sum / entries.size), None)
       }.toList
+
+      val rest = allExercises.filterNot(userExercises.contains)
+
+      userExercises ++ rest
     }
 
-    def examples(muscleGroups: Seq[MuscleGroupKey], intensity: Double): List[Exercise] = ???
+    /**
+     * Examples filtered by the given muscle groups and intended intensity
+     * @param muscleGroups the muscle groups
+     * @param intendedIntensity the intended intensity
+     * @return
+     */
+    def examples(muscleGroups: Seq[MuscleGroupKey], intendedIntensity: Double): List[Exercise] = {
+      examples(e ⇒ muscleGroups.contains(e.key) && e.intendedIntensity ~~ intendedIntensity)
+    }
 
-    def examples(muscleGroups: Seq[MuscleGroupKey]): List[Exercise] = ???
+    /**
+     * Examples filtered by the given muscle groups
+     * @param muscleGroups the muscle groups 
+     * @return the examples
+     */
+    def examples(muscleGroups: Seq[MuscleGroupKey]): List[Exercise] = {
+      examples(e ⇒ muscleGroups.contains(e.key))
+    }
 
+    /**
+     * Exercise examples across all exercises
+     * @return the examples
+     */
     def examples(): List[Exercise] = {
-      statistics.map(e ⇒ (e.count, e.exercise))
+      examples(_ ⇒ true)
     }
 
     def withNewExercise(sessionProperties: SessionProperties, exercise: Exercise): ExerciseStatistics = {
@@ -111,6 +136,7 @@ class UserExercisesStatistics extends PersistentView {
   import scala.concurrent.duration._
   import UserExercisesStatistics._
   private val userId = UserId(self.path.name)
+  private var exerciseStatistics: ExerciseStatistics = ExerciseStatistics.empty
 
   // we'll hang around for 360 seconds, just like the exercise sessions
   context.setReceiveTimeout(360.seconds)
@@ -122,7 +148,9 @@ class UserExercisesStatistics extends PersistentView {
   override val persistenceId: String = s"user-exercises-${userId.toString}"
 
   lazy val queries: Receive = {
-    case ExerciseExplicitClassificationExamples(None) ⇒ sender() ! ""
+    case ExerciseExplicitClassificationExamples(None) ⇒ sender() ! exerciseStatistics.examples()
+      // TODO: This is not the right handler: it should filter
+    case ExerciseExplicitClassificationExamples(_)    ⇒ sender() ! exerciseStatistics.examples()
   }
 
   lazy val notExercising: Receive = {
@@ -132,21 +160,9 @@ class UserExercisesStatistics extends PersistentView {
 
   private def exercising(sessionProperties: SessionProperties): Receive = {
     case ExerciseEvt(_, metadata, exercise) if isPersistent ⇒
-
-    case SessionEndedEvt(_) ⇒ context.become(notExercising)
+      exerciseStatistics = exerciseStatistics.withNewExercise(sessionProperties, exercise)
+    case SessionEndedEvt(_) if isPersistent ⇒ context.become(notExercising) 
   }
 
-  override def receive: Receive = notExercising
-
-  /*
-        val examples = sessionProperties.muscleGroupKeys.foldLeft(List.empty[Exercise]) { (r, b) ⇒
-        supportedMuscleGroups
-          .find(_.key == b)
-          .map { mg ⇒ r ++ mg.exercises.map(exercise ⇒ Exercise(exercise, None, None)) }
-          .getOrElse(r)
-      }
-
-      sender() ! examples
-
-   */
+  override def receive: Receive = notExercising.orElse(queries)
 }
