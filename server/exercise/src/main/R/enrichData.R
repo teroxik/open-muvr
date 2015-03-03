@@ -96,6 +96,54 @@ movingAverage = function(colX = "x", colY = "y", colZ = "z") {
   }
 }
 
+# Calculates simple standard deviation by column.
+simpleStandardDeviationByColumn = function(column) {
+  function(data) {
+    sd(data[[column]])
+  }
+}
+
+# Calculates simple standard deviation.
+#
+# @param data       the input data subset
+simpleStandardDeviation = function(colX = "x", colY = "y", colZ = "z") {
+  function(data) {
+    sd(c(data[[colX]], data[[colY]], data[[colZ]]))
+  }
+}
+
+# Calculates population standard deviation by column.
+populationStandardDeviationByColumn = function(column) {
+  function(data) {
+    count = nrow(data)
+    sd(data[[column]]) * sqrt((count - 1) / count)
+  }
+}
+
+# Calculates population standard deviation.
+#
+# @param data       the input data subset
+populationStandardDeviation = function(colX = "x", colY = "y", colZ = "z") {
+  function(data) {
+    count = nrow(data) * 3
+    sd(c(data[[colX]], data[[colY]], data[[colZ]])) * sqrt((count - 1) / count)
+  }
+}
+
+# Calculates interquartile range by column.
+interquartileRangeByColumn = function(column, type = 1) {
+  function(data) {
+    IQR(data[[column]], type = type)
+  }
+}
+
+# Calculates interquartile range.
+interquartileRange = function(colX = "x", colY = "y", colZ = "z", type = 1) {
+  function(data) {
+    IQR(c(data[[colX]], data[[colY]], data[[colZ]]), type = type)
+  }
+}
+
 # Enriches data with all implemented features.
 #
 # @param inputFile      path of the input csv file
@@ -109,6 +157,18 @@ enrichDataWithAllFeatures = function(inputFile, outputFile, windowSize) {
   enrichData(windowSize, "MeanY", movingAverageByColumn("y")) %|>%
   enrichData(windowSize, "MeanZ", movingAverageByColumn("z")) %|>%
   enrichData(windowSize, "Mean", movingAverage()) %|>%
+  enrichData(windowSize, "ssdX", simpleStandardDeviationByColumn("x")) %|>%
+  enrichData(windowSize, "ssdY", simpleStandardDeviationByColumn("y")) %|>%
+  enrichData(windowSize, "ssdZ", simpleStandardDeviationByColumn("z")) %|>%
+  enrichData(windowSize, "ssd", simpleStandardDeviation()) %|>%
+  enrichData(windowSize, "psdX", populationStandardDeviationByColumn("x")) %|>%
+  enrichData(windowSize, "psdY", populationStandardDeviationByColumn("y")) %|>%
+  enrichData(windowSize, "psdZ", populationStandardDeviationByColumn("z")) %|>%
+  enrichData(windowSize, "psd", populationStandardDeviation()) %|>%
+  enrichData(windowSize, "iqrX", interquartileRangeByColumn("x")) %|>%
+  enrichData(windowSize, "iqrY", interquartileRangeByColumn("y")) %|>%
+  enrichData(windowSize, "iqrZ", interquartileRangeByColumn("z")) %|>%
+  enrichData(windowSize, "iqr", interquartileRange()) %|>%
   # TODO: add more feature calculations here
   saveDataToCsv(outputFile)
   TRUE
