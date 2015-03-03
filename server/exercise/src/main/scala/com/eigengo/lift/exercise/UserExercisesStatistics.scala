@@ -5,7 +5,6 @@ import akka.contrib.pattern.ShardRegion
 import akka.persistence.PersistentView
 import com.eigengo.lift.common.UserId
 import com.eigengo.lift.exercise.UserExercises.{SessionEndedEvt, SessionStartedEvt, ExerciseEvt}
-import com.eigengo.lift.exercise.UserExercisesSessions.ExerciseSession
 
 object UserExercisesStatistics {
   /** The shard name */
@@ -22,6 +21,62 @@ object UserExercisesStatistics {
     MuscleGroup(key = "shoulders", title = "Shoulders", exercises = List("shoulder press", "lateral raise", "front raise", "rear raise", "upright row", "shrug")),
     MuscleGroup(key = "cardiovascular", title = "Cardiovascular", exercises = List("running", "cycling", "swimming", "elliptical", "rowing"))
   )
+
+  // Map[MuscleGroupKey, Map[Intensity, List[(ExerciseName, Count)]]]
+
+  object ExerciseStatistics {
+    private case class Entry(key: MuscleGroupKey, intendedIntensity: ExerciseIntensity, count: Int, exercise: Exercise) {
+      def inc(): Entry = copy(count = count + 1)
+
+      def matches(sessionProperties: SessionProperties, exercise: Exercise): Boolean = {
+
+        def matches(e1: Exercise, e2: Exercise): Boolean = {
+          e1.name == e2.name && ((e1.intensity, e2.intensity) match {
+            case (Some(i1), Some(i2)) ⇒ i1 ~~ i2
+            case _ ⇒ false
+          })
+        }
+
+        sessionProperties.muscleGroupKeys.contains(key) &&
+        intendedIntensity ~~ sessionProperties.intendedIntensity &&
+        matches(this.exercise, exercise)
+      }
+    }
+
+//    type ExerciseCount = (Int, Exercise)
+//    type MuscleGroupValue = Map[ExerciseIntensity, List[ExerciseCount]]
+//    type Statistics = Map[MuscleGroupKey, MuscleGroupValue]
+
+    val empty: ExerciseStatistics = ExerciseStatistics(List.empty)
+  }
+
+  /**
+   * Maintains exercise statistics
+   * @param statistics the statistics
+   */
+  case class ExerciseStatistics(statistics: List[ExerciseStatistics.Entry]) {
+    import ExerciseStatistics._
+
+    private def examples(filter: Entry ⇒ Boolean): List[Exercise] = {
+      statistics.filter(filter).groupBy(_.exercise.name).map {
+        case (name, entries) ⇒
+          Exercise(name, Some(entries.map(_.exercise.intensity.getOrElse(0.5)).sum / entries.size), None)
+      }.toList
+    }
+
+    def examples(muscleGroups: Seq[MuscleGroupKey], intensity: Double): List[Exercise] = ???
+
+    def examples(muscleGroups: Seq[MuscleGroupKey]): List[Exercise] = ???
+
+    def examples(): List[Exercise] = {
+      statistics.map(e ⇒ (e.count, e.exercise))
+    }
+
+    def withNewExercise(sessionProperties: SessionProperties, exercise: Exercise): ExerciseStatistics = {
+      ExerciseStatistics(statistics.map { e ⇒ if (e.matches(sessionProperties, exercise)) e.inc() else e })
+    }
+
+  }
 
   /**
    * Get the classification examples for the given user and session

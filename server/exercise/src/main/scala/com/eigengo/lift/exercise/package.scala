@@ -26,6 +26,7 @@ package object exercise {
    */
   implicit class ExerciseIntensityOps(intensity: ExerciseIntensity) {
     private val factor = 0.33
+    private val epsilon = 0.1
 
     /**
      * Much greater than operator
@@ -40,6 +41,13 @@ package object exercise {
      * @return true if "this" is much smaller than "that"
      */
     def <<(that: ExerciseIntensity): Boolean = intensity < that - (that * factor)
+
+    /**
+     * Roughly equals (within some ``epsilon``)
+     * @param that the value to compare this to
+     * @return true if this within epsilon of that
+     */
+    def ~~(that: ExerciseIntensity): Boolean = math.abs(intensity - that) < epsilon
   }
 
   /**
