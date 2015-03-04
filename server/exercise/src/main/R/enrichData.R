@@ -142,14 +142,14 @@ populationStandardDeviation = function(data) {
 # Calculates interquartile range by column.
 interquartileRangeByColumn = function(column, type = 1) {
   function(data) {
-    IQR(as.double(data[, column]), type = type)
+    IQR(as.double(data[, column]), type = type, na.rm = TRUE)
   }
 }
 
 # Calculates interquartile range.
 interquartileRange = function(type = 1) {
   function(data) {
-    IQR(c(as.double(data[, 1]), as.double(data[, 2]), as.double(data[, 3])), type = type)
+    IQR(c(as.double(data[, 1]), as.double(data[, 2]), as.double(data[, 3])), type = type, na.rm = TRUE)
   }
 }
 
