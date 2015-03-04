@@ -88,7 +88,7 @@ signalVectorMagnitude = function(data) {
 signalVectorMagnitudeFilter = function(column, threshold = 2000) {
   function(data) {
     svm = sqrt( (as.double(data[1]) ^ 2) + (as.double(data[2]) ^ 2) + (as.double(data[3]) ^ 2) )
-    as.double(data[, column])*(svm >= threshold)
+    as.double(data[column])*(svm >= threshold)
   }
 }
 

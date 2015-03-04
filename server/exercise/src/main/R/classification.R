@@ -17,13 +17,13 @@ enrichDataWithFeatures = function(data, windowSize) {
   data %|>%
   enrichData(1, "svm", signalVectorMagnitude) %|>%
   enrichData(1, "x.filtered", signalVectorMagnitudeFilter(1)) %|>%
-  enrichData(1, "y.filtered", signalVectorMagnitudeFilter(2, SVMColumn = "svm")) %|>%
-  enrichData(1, "z.filtered", signalVectorMagnitudeFilter(3, SVMColumn = "svm")) %|>%
+  enrichData(1, "y.filtered", signalVectorMagnitudeFilter(2)) %|>%
+  enrichData(1, "z.filtered", signalVectorMagnitudeFilter(3)) %|>%
 
   enrichData(windowSize, "mean", movingAverage, "x.filtered", "y.filtered", "z.filtered") %|>%
   enrichData(windowSize, "ssd", simpleStandardDeviation, "x.filtered", "y.filtered", "z.filtered") %|>%
   enrichData(windowSize, "psd", populationStandardDeviation, "x.filtered", "y.filtered", "z.filtered") %|>%
-  enrichData(windowSize, "iqr", interquartileRange, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "iqr", interquartileRange(), "x.filtered", "y.filtered", "z.filtered") %|>%
   enrichData(windowSize, "mad", meanAbsoluteDeviation, "x.filtered", "y.filtered", "z.filtered") %|>%
   enrichData(windowSize, "skew", overallSkewness, "x.filtered", "y.filtered", "z.filtered") %|>%
   enrichData(windowSize, "kurt", overallKurtosis, "x.filtered", "y.filtered", "z.filtered") %|>%
