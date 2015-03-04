@@ -16,7 +16,7 @@ import com.typesafe.config.Config
 import org.apache.spark.mllib.classification.NaiveBayes
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression.{LinearRegressionWithSGD, LabeledPoint}
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.SparkContext
 import spray.client.pipelining._
 import spray.http.Uri.Path
 import org.apache.spark.mllib.rdd.RDDFunctions._
@@ -35,28 +35,19 @@ class SuggestionsJob() extends Batch[Unit, Unit] with HttpClient with ExerciseMa
 
   override def name: String = "Test exercise suggestions"
 
-  override def defaultParams(args: Array[String]): Unit = ()
-
-  override def additionalConfig: (Config, SparkConf) => SparkConf = (c, conf) =>
-    conf.set("spark.cassandra.connection.host", c.getString("cassandra.host"))
-      .set("spark.cassandra.journal.keyspace", "akka")
-      .set("spark.cassandra.journal.table", "messages")
-
   override def execute(sc: SparkContext, config: Config, params: Unit): Future[Either[String, Unit]] = {
 
     val result = Try {
 
-      //TODO: Parameters
-      val useHistory = 15
-      val predictDays = 3
+      val historySize = config.getInt("jobs.suggestions.historySizeParameter")
+      val futureSize = config.getInt("jobs.suggestions.futureSizeParameter")
 
       val events = sc.eventTable().cache()
 
-      getEligibleUsers(events)
-        .map(pipeline(events, useHistory, predictDays))
-        .collect()
+      getEligibleUsers(events).collect()
+        .map(pipeline(events, historySize, futureSize))
         .map(x => {
-          //TODO: This is run in the driver program. Running at workers results in serializationexception. Can be fixed?
+          //TODO: Currently run in the driver program. Run this in cluster and avoid serializationexception.
           submitResult(x._1, x._2, config)
         })
     }
@@ -74,39 +65,49 @@ class SuggestionsJob() extends Batch[Unit, Unit] with HttpClient with ExerciseMa
   }
 
   private def pipeline(events: RawInputData, useHistory: Int, predictDays: Int): PredictionPipeline = { user =>
-    val inputData = preProcess(getPredictorInputData(events, user))
+    val inputData = preProcess(getPredictorInputData(events, user).sortBy(_.sessionProps.startDate, false))
     val inputDataSize = inputData.count
 
     val now = new Date()
 
-    val normalizedUseHistory = Math.min(useHistory, inputDataSize.toInt)
+    val normalizedUseHistory = Math.min(useHistory, inputDataSize.toInt - 1)
 
     val muscleKeyGroupsTrainingData = inputData
       .map(_._1)
-      .sliding(normalizedUseHistory)
+      .sliding(normalizedUseHistory + 1)
       .map(exercises => LabeledPoint(exercises.head, Vectors.dense(exercises.tail)))
 
     val intensityTrainingData = inputData
       .map(_._2)
-      .sliding(normalizedUseHistory)
+      .sliding(normalizedUseHistory + 1)
       .map(exercises => LabeledPoint(exercises.head, Vectors.dense(exercises.tail)))
 
     val muscleKeyGroupModel = NaiveBayes.train(muscleKeyGroupsTrainingData)
     val intensityModel = LinearRegressionWithSGD.train(intensityTrainingData, 100)
 
-    var testData: Array[(Double, Double)] = Array()
+    val indexedInputData = inputData.zipWithIndex().cache()
+    var predictions: List[(Double, Double, Date)] = Nil
 
-    val predictions = for (i <- 0 to predictDays - 1) yield {
-      testData = inputData
-        .zipWithIndex()
-        .filter(_._2 > inputDataSize - useHistory - 1 + i)
-        .collect()
-        .map(_._1) ++ testData.takeRight(i)
+    for (i <- 0 to predictDays - 1) {
+      val historyTestData = indexedInputData
+        .filter(x => x._2 > inputDataSize - normalizedUseHistory - 1 + i)
 
-      val predictedMuscleKeyGroup = muscleKeyGroupModel.predict(Vectors.dense(testData.map(_._1)))
-      val predictedIntensity = intensityModel.predict(Vectors.dense(testData.map(_._2)))
+      val padWithPredictions = normalizedUseHistory - historyTestData.count().toInt
 
-      (predictedMuscleKeyGroup, predictedIntensity, addDays(now, i + 1))
+      val paddedTestData = if(padWithPredictions > 0) {
+        historyTestData.map(_._1).collect() ++
+          predictions.take(Math.min(predictions.size, padWithPredictions)).map(x => (x._1, x._2)) ++
+          Array.fill(Math.min(0, padWithPredictions - predictions.size))((0.5, 0.5))
+      } else {
+        historyTestData.map(_._1).collect()
+      }
+
+      require(paddedTestData.size == normalizedUseHistory)
+
+      val predictedMuscleKeyGroup = muscleKeyGroupModel.predict(Vectors.dense(paddedTestData.map(_._1)))
+      val predictedIntensity = intensityModel.predict(Vectors.dense(paddedTestData.map(_._2)))
+
+      predictions = predictions.::((predictedMuscleKeyGroup, predictedIntensity, addDays(now, i + 1)))
     }
 
     (user, postProcess(predictions))

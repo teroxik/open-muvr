@@ -25,7 +25,6 @@ object SuggestionPipeline {
   type RawInputData = RDD[(JournalKey, Any)]
   type FilteredInputData = RDD[SessionStartedEvt]
   type NormalizedInputData = RDD[(Double, Double)]
-
   type PredictorResult = Seq[(Double, Double, Date)]
   type DenormalizedPredictorResult = Seq[(String, Double, Date)]
 
@@ -35,7 +34,7 @@ object SuggestionPipeline {
   object PreProcessing {
 
     private def normalize(exercise: String): Double =
-      weightedMuscleGroups.find(x => x._1.exercises.contains(exercise)).head._2
+      weightedMuscleGroups.find(x => x._1.key.compareToIgnoreCase(exercise) == 0).head._2
 
     def preProcess(input: FilteredInputData): NormalizedInputData =
       input.flatMap(e => e.sessionProps.muscleGroupKeys.map(sp => (normalize(sp), e.sessionProps.intendedIntensity)))
