@@ -155,30 +155,38 @@ object UserExercisesStatistics {
   }
 
   /**
-   * Get the classification examples for the given user and session
+   * Get the classification examples for the given user and session. The user identity must be set, in which case, the response
+   * will contain the exercises for that user across all the user's sessions. If the ``sessionId`` is set, then the response
+   * will contian the exercises matching the sessions properties. Somewhat redundantly, it is possible to specify ``None`` for
+   * ``sessionId`` and ``Some(Seq(x: String))`` for ``muscleGroupKeys``, and the response will contain examples for the given
+   * muscle groups. This is to help the clients with offline mode, where they are unable to make a new request to get
+   * examples for the given session id.
+   *
    * @param userId the user identity
    * @param sessionId the session identity
+   * @param muscleGroupKeys the muscle group keys
    */
-  case class UserExerciseExplicitClassificationExamples(userId: UserId, sessionId: Option[SessionId])
+  case class UserExerciseExplicitClassificationExamples(userId: UserId, sessionId: Option[SessionId], muscleGroupKeys: Option[Seq[MuscleGroupKey]])
 
   /**
    * Obtain list of classification examples
    * @param sessionId the session
+   * @param muscleGroupKeys the muscle group keys
    */
-  private case class ExerciseExplicitClassificationExamples(sessionId: Option[SessionId])
+  private case class ExerciseExplicitClassificationExamples(sessionId: Option[SessionId], muscleGroupKeys: Option[Seq[MuscleGroupKey]])
 
   /**
    * The id extractor
    */
   val idExtractor: ShardRegion.IdExtractor = {
-    case UserExerciseExplicitClassificationExamples(userId, sessionId) ⇒ (userId.toString, ExerciseExplicitClassificationExamples(sessionId))
+    case UserExerciseExplicitClassificationExamples(userId, s, m) ⇒ (userId.toString, ExerciseExplicitClassificationExamples(s, m))
   }
 
   /**
    * The shard resolver
    */
   val shardResolver: ShardRegion.ShardResolver = {
-    case UserExerciseExplicitClassificationExamples(userId, _) ⇒ s"${userId.hashCode() % 10}"
+    case UserExerciseExplicitClassificationExamples(userId, _, _) ⇒ s"${userId.hashCode() % 10}"
   }
 
 }
@@ -199,9 +207,11 @@ class UserExercisesStatistics extends PersistentView {
   override val persistenceId: String = s"user-exercises-${userId.toString}"
 
   lazy val queries: Receive = {
-    case ExerciseExplicitClassificationExamples(None) ⇒ sender() ! exerciseStatistics.examples()
+    case ExerciseExplicitClassificationExamples(None, None)       ⇒ sender() ! exerciseStatistics.examples()
+    case ExerciseExplicitClassificationExamples(None, Some(mgks)) ⇒ sender() ! exerciseStatistics.examples(mgks)
+
       // TODO: This is not the right handler: it should filter
-    case ExerciseExplicitClassificationExamples(_)    ⇒ sender() ! exerciseStatistics.examples()
+    case ExerciseExplicitClassificationExamples(_, _)             ⇒ sender() ! exerciseStatistics.examples()
   }
 
   lazy val notExercising: Receive = {
