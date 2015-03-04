@@ -1,7 +1,5 @@
 library(moments)
 library(entropy)
-library(foreach)
-library(plyr)
 
 ########################################################################################################################
 #
@@ -10,7 +8,6 @@ library(plyr)
 ########################################################################################################################
 
 log = TRUE
-parallelCalculation = FALSE
 
 # Writes a log message if logging is enabled.
 #
