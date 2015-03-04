@@ -196,7 +196,7 @@ overallKurtosis = function(data) {
 # @param quartile   the quartile numer (1, 2, 3)
 quartileByColumn = function(quartile, column) {
   function(data) {
-    quantile(as.double(data[, column]))[[quartile + 1]]
+    quantile(as.double(data[, column]), na.rm = TRUE)[[quartile + 1]]
   }
 }
 
@@ -205,7 +205,7 @@ quartileByColumn = function(quartile, column) {
 # @param quartile   the quartile numer (1, 2, 3)
 overallQuartile = function(quartile) {
   function(data) {
-    quantile(c(as.double(data[, 1]), as.double(data[, 2]), as.double(data[, 3])))[[quartile + 1]]
+    quantile(c(as.double(data[, 1]), as.double(data[, 2]), as.double(data[, 3])), na.rm = TRUE)[[quartile + 1]]
   }
 }
 
