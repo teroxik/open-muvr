@@ -15,23 +15,23 @@ debug = FALSE
 # @param windowSize the size of the sliding window
 enrichDataWithFeatures = function(data, windowSize) {
   data %|>%
-  enrichData(1, "svm", signalVectorMagnitude()) %|>%
-  enrichData(1, "x.filtered", signalVectorMagnitudeFilter("x", SVMColumn = "svm")) %|>%
-  enrichData(1, "y.filtered", signalVectorMagnitudeFilter("y", SVMColumn = "svm")) %|>%
-  enrichData(1, "z.filtered", signalVectorMagnitudeFilter("z", SVMColumn = "svm")) %|>%
+  enrichData(1, "svm", signalVectorMagnitude) %|>%
+  enrichData(1, "x.filtered", signalVectorMagnitudeFilter(1)) %|>%
+  enrichData(1, "y.filtered", signalVectorMagnitudeFilter(2, SVMColumn = "svm")) %|>%
+  enrichData(1, "z.filtered", signalVectorMagnitudeFilter(3, SVMColumn = "svm")) %|>%
 
-  enrichData(windowSize, "mean", movingAverage("x.filtered", "y.filtered", "z.filtered")) %|>%
-  enrichData(windowSize, "ssd", simpleStandardDeviation("x.filtered", "y.filtered", "z.filtered")) %|>%
-  enrichData(windowSize, "psd", populationStandardDeviation("x.filtered", "y.filtered", "z.filtered")) %|>%
-  enrichData(windowSize, "iqr", interquartileRange("x.filtered", "y.filtered", "z.filtered")) %|>%
-  enrichData(windowSize, "mad", meanAbsoluteDeviation("x.filtered", "y.filtered", "z.filtered")) %|>%
-  enrichData(windowSize, "skew", overallSkewness("x.filtered", "y.filtered", "z.filtered")) %|>%
-  enrichData(windowSize, "kurt", overallKurtosis("x.filtered", "y.filtered", "z.filtered")) %|>%
-  enrichData(windowSize, "q1", overallQuartile(1, "x.filtered", "y.filtered", "z.filtered")) %|>%
-  enrichData(windowSize, "q2", overallQuartile(2, "x.filtered", "y.filtered", "z.filtered")) %|>%
-  enrichData(windowSize, "q3", overallQuartile(3, "x.filtered", "y.filtered", "z.filtered")) %|>%
-  enrichData(windowSize, "sva", signalVectorArea("x.filtered", "y.filtered", "z.filtered")) %|>%
-  enrichData(windowSize, "ent", overallEntropy("x.filtered", "y.filtered", "z.filtered"))
+  enrichData(windowSize, "mean", movingAverage, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "ssd", simpleStandardDeviation, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "psd", populationStandardDeviation, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "iqr", interquartileRange, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "mad", meanAbsoluteDeviation, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "skew", overallSkewness, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "kurt", overallKurtosis, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "q1", overallQuartile(1), "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "q2", overallQuartile(2), "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "q3", overallQuartile(3), "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "sva", signalVectorArea, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "ent", overallEntropy, "x.filtered", "y.filtered", "z.filtered")
 }
 
 ########################################################################################################################
