@@ -5,6 +5,7 @@ import akka.contrib.pattern.ShardRegion
 import akka.persistence.PersistentView
 import com.eigengo.lift.common.UserId
 import com.eigengo.lift.exercise.UserExercises.{SessionEndedEvt, SessionStartedEvt, ExerciseEvt}
+import com.eigengo.lift.exercise.UserExercisesStatistics.ExerciseStatistics.Entry
 
 object UserExercisesStatistics {
   /** The shard name */
@@ -22,7 +23,12 @@ object UserExercisesStatistics {
     MuscleGroup(key = "cardiovascular", title = "Cardiovascular", exercises = List("running", "cycling", "swimming", "elliptical", "rowing"))
   )
   // all exercises
-  val allExercises: List[Exercise] = supportedMuscleGroups.flatMap(_.exercises).map(name ⇒ Exercise(name, None, None))
+  private val allExerciseEntries: List[Entry] =
+    supportedMuscleGroups.flatMap { mg ⇒
+      mg.exercises.map { e ⇒
+        Entry(mg.key, 0, 0, Exercise(e, None, None))
+      }
+    }
 
   object ExerciseStatistics {
     case class Entry(key: MuscleGroupKey, intendedIntensity: ExerciseIntensity, count: Int, exercise: Exercise) {
@@ -57,17 +63,27 @@ object UserExercisesStatistics {
     /**
      * Compute the exerises ordered by their counts, with intensity set to average intensity in the set
      * identified by the filter
-     * @param filter the filtering function
+     * @param muscleGroups filter on muscle groups
+     * @param intendedIntensity filter on intended intensity
      * @return the exercises, ordered by count
      */
-    private def examples(filter: Entry ⇒ Boolean): List[Exercise] = {
+    private def examples(muscleGroups: Option[Seq[MuscleGroupKey]], intendedIntensity: Option[Double]): List[Exercise] = {
+      def exerciseByName(l: Exercise, r: Exercise): Boolean = {
+        l.name < r.name
+      }
+
+      def filter(entry: Entry): Boolean = {
+        muscleGroups.map(_.contains(entry.key)).getOrElse(true) &&
+        intendedIntensity.map(entry.intendedIntensity ~~).getOrElse(true)
+      }
+
       val userExercises = statistics.filter(filter).sortBy(_.count).groupBy(_.exercise.name).map {
         case (name, entries) ⇒ Exercise(name, Some(entries.map(_.exercise.intensity.getOrElse(0.5)).sum / entries.size), None)
       }.toList
 
-      val rest = allExercises.filterNot(userExercises.contains)
+      val rest = allExerciseEntries.filter(filter).map(_.exercise).filterNot(e ⇒ userExercises.exists(ue ⇒ ue.name == e.name))
 
-      userExercises ++ rest
+      userExercises ++ rest.sortWith(exerciseByName)
     }
 
     /**
@@ -77,7 +93,7 @@ object UserExercisesStatistics {
      * @return
      */
     def examples(muscleGroups: Seq[MuscleGroupKey], intendedIntensity: Double): List[Exercise] = {
-      examples(e ⇒ muscleGroups.contains(e.key) && e.intendedIntensity ~~ intendedIntensity)
+      examples(Some(muscleGroups), Some(intendedIntensity))
     }
 
     /**
@@ -86,7 +102,7 @@ object UserExercisesStatistics {
      * @return the examples
      */
     def examples(muscleGroups: Seq[MuscleGroupKey]): List[Exercise] = {
-      examples(e ⇒ muscleGroups.contains(e.key))
+      examples(Some(muscleGroups), None)
     }
 
     /**
@@ -94,11 +110,15 @@ object UserExercisesStatistics {
      * @return the examples
      */
     def examples(): List[Exercise] = {
-      examples(_ ⇒ true)
+      examples(None, None)
     }
 
     def withNewExercise(sessionProperties: SessionProperties, exercise: Exercise): ExerciseStatistics = {
-      ExerciseStatistics(statistics.map { e ⇒ if (e.matches(sessionProperties, exercise)) e.inc() else e })
+      val x = statistics.indexWhere(_.matches(sessionProperties, exercise)) match {
+        case -1 ⇒ statistics ++ sessionProperties.muscleGroupKeys.map(k ⇒ Entry(k, sessionProperties.intendedIntensity, 1, exercise))
+        case i ⇒ statistics.updated(i, statistics(i).inc())
+      }
+      ExerciseStatistics(x)
     }
 
   }
