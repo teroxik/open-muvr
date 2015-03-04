@@ -1,5 +1,6 @@
 library(moments)
 library(entropy)
+library(sets)
 
 ########################################################################################################################
 #
@@ -37,6 +38,45 @@ writeLogMessage = function(message) {
 readDataCsv = function(input) {
   writeLogMessage("Reading data from \"" %+% input %+% "\" ...")
   read.csv(file = input, header = TRUE)
+}
+
+# Starts an enrichment batch by declaring windowSize.
+windowSize = function(count) {
+  function(data) {
+    tuple(data = data, windowSize = count, calculations = list())
+  }
+}
+
+# Adds a calculation to the batch.
+enrich = function(colName, f) {
+  force(f)
+  function(current) {
+    calculations = current[["calculations"]]
+    calculations[[length(calculations) + 1]] = pair(colName = colName, f = f)
+    tuple(data = current[["data"]], windowSize = current[["windowSize"]],
+      calculations = calculations)
+  }
+}
+
+# Run the batch.
+run = function(colX = "x", colY = "y", colZ = "z") {
+  function(final) {
+    data = final[["data"]]
+    windowSize = final[["windowSize"]]
+    calculations = final[["calculations"]]
+    count = nrow(data)
+    m = matrix(c(data[[colX]], data[[colY]], data[[colZ]]), ncol = 3)
+    for (i in windowSize:count) {
+      for (calc in calculations) {
+        if (!is.null(calc)) {
+          colName = calc[["colName"]]
+          f = calc[["f"]]
+          data[i, colName] = f(m[(i - windowSize + 1):i,])
+        }
+      }
+    }
+    data
+  }
 }
 
 # Enriches the data frame with function ``f``, called with
