@@ -1,5 +1,7 @@
 library(moments)
 library(entropy)
+library(foreach)
+library(plyr)
 
 ########################################################################################################################
 #
@@ -7,7 +9,8 @@ library(entropy)
 #
 ########################################################################################################################
 
-log = TRUE
+log = FALSE
+parallelCalculation = TRUE
 
 # Writes a log message if logging is enabled.
 #
@@ -50,7 +53,9 @@ enrichData = function(windowSize, colName, f) {
   force(f)
   function(data) {
     writeLogMessage("Calculating " %+% colName %+% " ...")
-    data[, colName] = apply(data, 1, f)
+    count = nrow(data)
+    data[windowSize:count, colName] =
+      ldply(1:(count - windowSize + 1), function(i) { f(data[i:(i + windowSize - 1),]) }, .parallel = parallelCalculation)
     data
   }
 }
