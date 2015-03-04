@@ -10,7 +10,7 @@ import org.apache.spark.rdd.RDD
 
 import scala.util.Try
 
-object SuggestionPipeline {
+private[suggestions] object SuggestionPipeline {
 
   private val weightedMuscleGroups = MuscleGroups.supportedMuscleGroups.zip(0d to 1 by 1d / MuscleGroups.supportedMuscleGroups.size)
 
