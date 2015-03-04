@@ -30,10 +30,32 @@ object UserExercisesStatistics {
       }
     }
 
+  /**
+   * Companion object defining the table "entry" and other convenience entities
+   */
   object ExerciseStatistics {
+
+    /**
+     * The "row" in a "table" of exercises
+     * @param key the muscle group key
+     * @param intendedIntensity the session's intended intensity
+     * @param count the count of exercises
+     * @param exercise the exercise
+     */
     case class Entry(key: MuscleGroupKey, intendedIntensity: ExerciseIntensity, count: Int, exercise: Exercise) {
+      /**
+       * Return an Entry with incremented count
+       * @return new entry
+       */
       def inc(): Entry = copy(count = count + 1)
 
+      /**
+       * Computes whether the given ``sessionProperties`` and ``exercise`` match the values in the row
+       *
+       * @param sessionProperties the session props
+       * @param exercise the exercise
+       * @return true if this row represents the given ``exercise`` in the ``sessionProperties``
+       */
       def matches(sessionProperties: SessionProperties, exercise: Exercise): Boolean = {
 
         def matches(e1: Exercise, e2: Exercise): Boolean = {
@@ -72,16 +94,19 @@ object UserExercisesStatistics {
         l.name < r.name
       }
 
-      def filter(entry: Entry): Boolean = {
-        muscleGroups.map(_.contains(entry.key)).getOrElse(true) &&
+      def mgkFilter(entry: Entry): Boolean = {
+        muscleGroups.map(_.contains(entry.key)).getOrElse(true)
+      }
+
+      def intensityFilter(entry: Entry): Boolean = {
         intendedIntensity.map(entry.intendedIntensity ~~).getOrElse(true)
       }
 
-      val userExercises = statistics.filter(filter).sortBy(_.count).groupBy(_.exercise.name).map {
+      val userExercises = statistics.filter(e ⇒ mgkFilter(e) && intensityFilter(e)).sortBy(_.count).groupBy(_.exercise.name).map {
         case (name, entries) ⇒ Exercise(name, Some(entries.map(_.exercise.intensity.getOrElse(0.5)).sum / entries.size), None)
       }.toList
 
-      val rest = allExerciseEntries.filter(filter).map(_.exercise).filterNot(e ⇒ userExercises.exists(ue ⇒ ue.name == e.name))
+      val rest = allExerciseEntries.filter(mgkFilter).map(_.exercise).filterNot(e ⇒ userExercises.exists(ue ⇒ ue.name == e.name))
 
       userExercises ++ rest.sortWith(exerciseByName)
     }
@@ -113,6 +138,12 @@ object UserExercisesStatistics {
       examples(None, None)
     }
 
+    /**
+     * Returns a new ExerciseStatistics with the new exercises added or its matching record incremented
+     * @param sessionProperties the session properties
+     * @param exercise the exercise to be added
+     * @return the updated this
+     */
     def withNewExercise(sessionProperties: SessionProperties, exercise: Exercise): ExerciseStatistics = {
       val x = statistics.indexWhere(_.matches(sessionProperties, exercise)) match {
         case -1 ⇒ statistics ++ sessionProperties.muscleGroupKeys.map(k ⇒ Entry(k, sessionProperties.intendedIntensity, 1, exercise))
