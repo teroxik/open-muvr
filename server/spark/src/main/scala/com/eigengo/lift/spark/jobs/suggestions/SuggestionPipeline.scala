@@ -29,7 +29,10 @@ object SuggestionPipeline {
   type DenormalizedPredictorResult = Seq[(String, Double, Date)]
 
   def addDays(date: Date, days: Int) =
-    new Date(date.getTime + (3600000 * 24 * days))
+    addMilliseconds(date, 3600000 * 24 * days)
+
+  def addMilliseconds(date: Date, millis: Long) =
+    new Date(date.getTime + millis)
 
   object PreProcessing {
 
@@ -39,13 +42,13 @@ object SuggestionPipeline {
     def preProcess(input: FilteredInputData): NormalizedInputData =
       input.flatMap(e => e.sessionProps.muscleGroupKeys.map(sp => (normalize(sp), e.sessionProps.intendedIntensity)))
 
-    def getEligibleUsers(events: RawInputData): RDD[String] = {
+    def getEligibleUsers(events: RawInputData, sessionEndedBefore: Long): RDD[String] = {
       events
         .flatMap {
           case (k, e) if e.isInstanceOf[SessionStartedEvt] => Some((k, e.asInstanceOf[SessionStartedEvt]))
           case _ => None
         }
-        .filter(ke => ke._2.sessionProps.startDate.compareTo(addDays(new Date(), -1)) > 0)
+        .filter(ke => ke._2.sessionProps.startDate.compareTo(addMilliseconds(new Date(), -sessionEndedBefore)) > 0)
         .map(_._1)
         .map(e => Try(UUID.fromString(e.persistenceId.takeRight(36))))
         .filter(_.isSuccess)

@@ -1,5 +1,6 @@
 package com.eigengo.lift.exercise
 
+import com.eigengo.lift.Exercise.RequestedClassification
 import com.eigengo.lift.exercise.UserExercises.ClassifyExerciseEvt
 import java.util.Date
 import org.scalacheck.Arbitrary._

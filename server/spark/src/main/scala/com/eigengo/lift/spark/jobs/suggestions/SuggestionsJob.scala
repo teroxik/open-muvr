@@ -1,6 +1,7 @@
 package com.eigengo.lift.spark.jobs.suggestions
 
 import java.util.Date
+import java.util.concurrent.TimeUnit
 
 import akka.analytics.cassandra._
 import com.eigengo.lift.Suggestion.Session
@@ -20,6 +21,7 @@ import org.apache.spark.SparkContext
 import spray.client.pipelining._
 import spray.http.Uri.Path
 import org.apache.spark.mllib.rdd.RDDFunctions._
+import scala.concurrent.duration._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -29,7 +31,12 @@ import scala.util.{Failure, Try, _}
  * Spark job suggesting exercises based on various parameters
  * Reads history from cassandra, uses trainers hints and programmes
  *
- * Currently a test class only suggesting random exercises
+ * Currently a naive bayes classifier used for muscle groups
+ * and linear regression for intensities
+ *
+ * Training data are N previous sessions
+ * Testing data for today+1 are N previous sessions
+ * Testing data for today+2 are N-1 previous sessions and 1 prediction
  */
 class SuggestionsJob() extends Batch[Unit, Unit] with HttpClient with ExerciseMarshallers {
 
@@ -39,12 +46,16 @@ class SuggestionsJob() extends Batch[Unit, Unit] with HttpClient with ExerciseMa
 
     val result = Try {
 
+      val sessionEndedBefore = config
+        .getDuration("jobs.suggestions.includeUsersSessionEndedBefore", TimeUnit.MILLISECONDS)
+        .milliseconds
+        .toMillis
       val historySize = config.getInt("jobs.suggestions.historySizeParameter")
       val futureSize = config.getInt("jobs.suggestions.futureSizeParameter")
 
       val events = sc.eventTable().cache()
 
-      getEligibleUsers(events).collect()
+      getEligibleUsers(events, sessionEndedBefore).collect()
         .map(pipeline(events, historySize, futureSize))
         .map(x => {
           //TODO: Currently run in the driver program. Run this in cluster and avoid serializationexception.
