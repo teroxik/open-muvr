@@ -52,7 +52,7 @@ class StandardExerciseModelTest extends AkkaSpec(ConfigFactory.load("classificat
     "correctly detect wrist sensor taps" in {
       // FIXME: is this correct?
       val msgs: List[SensorNetValue] = accelerometerData.map(d => SensorNetValue(Vector(d), Vector(dummyValue), Vector(dummyValue), Vector(dummyValue), Vector(dummyValue)))
-      val tapIndex = List(256 until 290, 341 until 344, 379 until 408, 546 until 577).flatten.toList
+      val tapIndex = List(380 until 382, 383 until 389, 390 until 393, 394 until 401, 402 until 404, 549 until 556, 557 until 559, 561 until 570).flatten.toList
       // Simulate source that outputs messages and then blocks
       val in = PublisherProbe[SensorNetValue]()
       val out = SubscriberProbe[BindToSensors]()
