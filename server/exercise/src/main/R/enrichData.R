@@ -295,69 +295,65 @@ enrichDataWithAllFeatures = function(inputFile, outputFile, windowSize) {
   readDataCsv %|>%
   enrichData(1, "SVM", signalVectorMagnitude) %|>%
 
-  enrichDataBatch(windowSize) %|>%
+  enrichData(windowSize, "MeanX", movingAverageByColumn(1)) %|>%
+  enrichData(windowSize, "MeanY", movingAverageByColumn(2)) %|>%
+  enrichData(windowSize, "MeanZ", movingAverageByColumn(3)) %|>%
+  enrichData(windowSize, "Mean", movingAverage) %|>%
 
-    addComputedColumn("MeanX", movingAverageByColumn(1)) %|>%
-    addComputedColumn("MeanY", movingAverageByColumn(2)) %|>%
-    addComputedColumn("MeanZ", movingAverageByColumn(3)) %|>%
-    addComputedColumn("Mean", movingAverage) %|>%
+  enrichData(windowSize, "ssdX", simpleStandardDeviationByColumn(1)) %|>%
+  enrichData(windowSize, "ssdY", simpleStandardDeviationByColumn(2)) %|>%
+  enrichData(windowSize, "ssdZ", simpleStandardDeviationByColumn(3)) %|>%
+  enrichData(windowSize, "ssd", simpleStandardDeviation) %|>%
 
-    addComputedColumn("ssdX", simpleStandardDeviationByColumn(1)) %|>%
-    addComputedColumn("ssdY", simpleStandardDeviationByColumn(2)) %|>%
-    addComputedColumn("ssdZ", simpleStandardDeviationByColumn(3)) %|>%
-    addComputedColumn("ssd", simpleStandardDeviation) %|>%
+  enrichData(windowSize, "psdX", populationStandardDeviationByColumn(1)) %|>%
+  enrichData(windowSize, "psdY", populationStandardDeviationByColumn(2)) %|>%
+  enrichData(windowSize, "psdZ", populationStandardDeviationByColumn(3)) %|>%
+  enrichData(windowSize, "psd", populationStandardDeviation) %|>%
 
-    addComputedColumn("psdX", populationStandardDeviationByColumn(1)) %|>%
-    addComputedColumn("psdY", populationStandardDeviationByColumn(2)) %|>%
-    addComputedColumn("psdZ", populationStandardDeviationByColumn(3)) %|>%
-    addComputedColumn("psd", populationStandardDeviation) %|>%
+  enrichData(windowSize, "iqrX", interquartileRangeByColumn(1)) %|>%
+  enrichData(windowSize, "iqrY", interquartileRangeByColumn(2)) %|>%
+  enrichData(windowSize, "iqrZ", interquartileRangeByColumn(3)) %|>%
+  enrichData(windowSize, "iqr", interquartileRange()) %|>%
 
-    addComputedColumn("iqrX", interquartileRangeByColumn(1)) %|>%
-    addComputedColumn("iqrY", interquartileRangeByColumn(2)) %|>%
-    addComputedColumn("iqrZ", interquartileRangeByColumn(3)) %|>%
-    addComputedColumn("iqr", interquartileRange()) %|>%
+  enrichData(windowSize, "madX", meanAbsoluteDeviationByColumn(1)) %|>%
+  enrichData(windowSize, "madY", meanAbsoluteDeviationByColumn(2)) %|>%
+  enrichData(windowSize, "madZ", meanAbsoluteDeviationByColumn(3)) %|>%
+  enrichData(windowSize, "mad", meanAbsoluteDeviation) %|>%
 
-    addComputedColumn("madX", meanAbsoluteDeviationByColumn(1)) %|>%
-    addComputedColumn("madY", meanAbsoluteDeviationByColumn(2)) %|>%
-    addComputedColumn("madZ", meanAbsoluteDeviationByColumn(3)) %|>%
-    addComputedColumn("mad", meanAbsoluteDeviation) %|>%
+  enrichData(windowSize, "skewX", skewnessByColumn(1)) %|>%
+  enrichData(windowSize, "skewY", skewnessByColumn(2)) %|>%
+  enrichData(windowSize, "skewZ", skewnessByColumn(3)) %|>%
+  enrichData(windowSize, "skew", overallSkewness) %|>%
 
-    addComputedColumn("skewX", skewnessByColumn(1)) %|>%
-    addComputedColumn("skewY", skewnessByColumn(2)) %|>%
-    addComputedColumn("skewZ", skewnessByColumn(3)) %|>%
-    addComputedColumn("skew", overallSkewness) %|>%
+  enrichData(windowSize, "kurtX", kurtosisByColumn(1)) %|>%
+  enrichData(windowSize, "kurtY", kurtosisByColumn(2)) %|>%
+  enrichData(windowSize, "kurtZ", kurtosisByColumn(3)) %|>%
+  enrichData(windowSize, "kurt", overallKurtosis) %|>%
 
-    addComputedColumn("kurtX", kurtosisByColumn(1)) %|>%
-    addComputedColumn("kurtY", kurtosisByColumn(2)) %|>%
-    addComputedColumn("kurtZ", kurtosisByColumn(3)) %|>%
-    addComputedColumn("kurt", overallKurtosis) %|>%
+  enrichData(windowSize, "q1X", quartileByColumn(1, 1)) %|>%
+  enrichData(windowSize, "q1Y", quartileByColumn(1, 2)) %|>%
+  enrichData(windowSize, "q1Z", quartileByColumn(1, 3)) %|>%
+  enrichData(windowSize, "q1", overallQuartile(1)) %|>%
 
-    addComputedColumn("q1X", quartileByColumn(1, 1)) %|>%
-    addComputedColumn("q1Y", quartileByColumn(1, 2)) %|>%
-    addComputedColumn("q1Z", quartileByColumn(1, 3)) %|>%
-    addComputedColumn("q1", overallQuartile(1)) %|>%
+  enrichData(windowSize, "q2X", quartileByColumn(2, 1)) %|>%
+  enrichData(windowSize, "q2Y", quartileByColumn(2, 2)) %|>%
+  enrichData(windowSize, "q2Z", quartileByColumn(2, 3)) %|>%
+  enrichData(windowSize, "q2", overallQuartile(2)) %|>%
 
-    addComputedColumn("q2X", quartileByColumn(2, 1)) %|>%
-    addComputedColumn("q2Y", quartileByColumn(2, 2)) %|>%
-    addComputedColumn("q2Z", quartileByColumn(2, 3)) %|>%
-    addComputedColumn("q2", overallQuartile(2)) %|>%
+  enrichData(windowSize, "q3X", quartileByColumn(3, 1)) %|>%
+  enrichData(windowSize, "q3Y", quartileByColumn(3, 2)) %|>%
+  enrichData(windowSize, "q3Z", quartileByColumn(3, 3)) %|>%
+  enrichData(windowSize, "q3", overallQuartile(3)) %|>%
 
-    addComputedColumn("q3X", quartileByColumn(3, 1)) %|>%
-    addComputedColumn("q3Y", quartileByColumn(3, 2)) %|>%
-    addComputedColumn("q3Z", quartileByColumn(3, 3)) %|>%
-    addComputedColumn("q3", overallQuartile(3)) %|>%
+  enrichData(windowSize, "svaX", signalVectorAreaByColumn(1)) %|>%
+  enrichData(windowSize, "svaY", signalVectorAreaByColumn(2)) %|>%
+  enrichData(windowSize, "svaZ", signalVectorAreaByColumn(3)) %|>%
+  enrichData(windowSize, "sva", signalVectorArea) %|>%
 
-    addComputedColumn("svaX", signalVectorAreaByColumn(1)) %|>%
-    addComputedColumn("svaY", signalVectorAreaByColumn(2)) %|>%
-    addComputedColumn("svaZ", signalVectorAreaByColumn(3)) %|>%
-    addComputedColumn("sva", signalVectorArea) %|>%
-
-    addComputedColumn("entX", entropyByColumn(1)) %|>%
-    addComputedColumn("entY", entropyByColumn(2)) %|>%
-    addComputedColumn("entZ", entropyByColumn(3)) %|>%
-    addComputedColumn("ent", overallEntropy) %|>%
-
-  runBatch() %|>%
+  enrichData(windowSize, "entX", entropyByColumn(1)) %|>%
+  enrichData(windowSize, "entY", entropyByColumn(2)) %|>%
+  enrichData(windowSize, "entZ", entropyByColumn(3)) %|>%
+  enrichData(windowSize, "ent", overallEntropy) %|>%
 
   # TODO: add more feature calculations here
   saveDataToCsv(outputFile)

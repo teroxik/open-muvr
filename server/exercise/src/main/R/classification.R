@@ -16,27 +16,23 @@ debug = FALSE
 enrichDataWithFeatures = function(data, windowSize) {
   data %|>%
 
-  enrichDataBatch(windowSize = 1) %|>%
-    addComputedColumn("svm", signalVectorMagnitude) %|>%
-    addComputedColumn("x.filtered", signalVectorMagnitudeFilter(1)) %|>%
-    addComputedColumn("y.filtered", signalVectorMagnitudeFilter(2)) %|>%
-    addComputedColumn("z.filtered", signalVectorMagnitudeFilter(3)) %|>%
-  runBatch() %|>%
+  enrichData(1, "svm", signalVectorMagnitude) %|>%
+  enrichData(1, "x.filtered", signalVectorMagnitudeFilter(1)) %|>%
+  enrichData(1, "y.filtered", signalVectorMagnitudeFilter(2)) %|>%
+  enrichData(1, "z.filtered", signalVectorMagnitudeFilter(3)) %|>%
 
-  enrichDataBatch(windowSize) %|>%
-    addComputedColumn("mean", movingAverage) %|>%
-    addComputedColumn("ssd", simpleStandardDeviation) %|>%
-    addComputedColumn("psd", populationStandardDeviation) %|>%
-    addComputedColumn("iqr", interquartileRange()) %|>%
-    addComputedColumn("mad", meanAbsoluteDeviation) %|>%
-    addComputedColumn("skew", overallSkewness) %|>%
-    addComputedColumn("kurt", overallKurtosis) %|>%
-    addComputedColumn("q1", overallQuartile(1)) %|>%
-    addComputedColumn("q2", overallQuartile(2)) %|>%
-    addComputedColumn("q3", overallQuartile(3)) %|>%
-    addComputedColumn("sva", signalVectorArea) %|>%
-    addComputedColumn("ent", overallEntropy) %|>%
-  runBatch("x.filtered", "y.filtered", "z.filtered")
+  enrichData(windowSize, "mean", movingAverage, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "ssd", simpleStandardDeviation, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "psd", populationStandardDeviation, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "iqr", interquartileRange(), "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "mad", meanAbsoluteDeviation, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "skew", overallSkewness, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "kurt", overallKurtosis, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "q1", overallQuartile(1), "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "q2", overallQuartile(2), "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "q3", overallQuartile(3), "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "sva", signalVectorArea, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "ent", overallEntropy, "x.filtered", "y.filtered", "z.filtered")
 }
 
 ########################################################################################################################
