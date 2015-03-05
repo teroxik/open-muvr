@@ -8,7 +8,7 @@ library(sets)
 #
 ########################################################################################################################
 
-log = TRUE
+log = FALSE
 
 # Writes a log message if logging is enabled.
 #
@@ -41,14 +41,21 @@ readDataCsv = function(input) {
 }
 
 # Starts an enrichment batch by declaring windowSize.
-windowSize = function(count) {
+#
+# @param windowSize     defines the size of the window
+# @param data           the data frame to process
+enrichDataBatch = function(windowSize = 1) {
   function(data) {
-    tuple(data = data, windowSize = count, calculations = list())
+    tuple(data = data, windowSize = windowSize, calculations = list())
   }
 }
 
 # Adds a calculation to the batch.
-enrich = function(colName, f) {
+#
+# @param colName        the name of the new column
+# @param f              the function that calculates the values in hte column
+# @param current        the current batch
+addComputedColumn = function(colName, f) {
   force(f)
   function(current) {
     calculations = current[["calculations"]]
@@ -58,8 +65,13 @@ enrich = function(colName, f) {
   }
 }
 
-# Run the batch.
-run = function(colX = "x", colY = "y", colZ = "z") {
+# Runs the batch.
+#
+# @param colX       the name of the column X
+# @param colY       the name of the column Y
+# @param colZ       the name of the column Z
+# @param final      the batch to run
+runBatch = function(colX = "x", colY = "y", colZ = "z") {
   function(final) {
     data = final[["data"]]
     windowSize = final[["windowSize"]]
@@ -67,11 +79,12 @@ run = function(colX = "x", colY = "y", colZ = "z") {
     count = nrow(data)
     m = matrix(c(data[[colX]], data[[colY]], data[[colZ]]), ncol = 3)
     for (i in windowSize:count) {
+      currentWindow = m[(i - windowSize + 1):i,]
       for (calc in calculations) {
         if (!is.null(calc)) {
           colName = calc[["colName"]]
           f = calc[["f"]]
-          data[i, colName] = f(m[(i - windowSize + 1):i,])
+          data[i, colName] = f(currentWindow)
         }
       }
     }
@@ -89,7 +102,6 @@ run = function(colX = "x", colY = "y", colZ = "z") {
 enrichData = function(windowSize, colName, f, colX = "x", colY = "y", colZ = "z") {
   force(f)
   function(data) {
-    writeLogMessage("Calculating " %+% colName %+% " ( " %+% nrow(data) %+% "rows )" %+% " ...")
     count = nrow(data)
     m = matrix(c(data[[colX]], data[[colY]], data[[colZ]]), ncol = 3)
     for (i in windowSize:count) {
@@ -282,65 +294,70 @@ enrichDataWithAllFeatures = function(inputFile, outputFile, windowSize) {
   inputFile %|>%
   readDataCsv %|>%
   enrichData(1, "SVM", signalVectorMagnitude) %|>%
-  enrichData(windowSize, "MeanX", movingAverageByColumn(1)) %|>%
-  enrichData(windowSize, "MeanY", movingAverageByColumn(2)) %|>%
-  enrichData(windowSize, "MeanZ", movingAverageByColumn(3)) %|>%
-  enrichData(windowSize, "Mean", movingAverage) %|>%
 
-  enrichData(windowSize, "ssdX", simpleStandardDeviationByColumn(1)) %|>%
-  enrichData(windowSize, "ssdY", simpleStandardDeviationByColumn(2)) %|>%
-  enrichData(windowSize, "ssdZ", simpleStandardDeviationByColumn(3)) %|>%
-  enrichData(windowSize, "ssd", simpleStandardDeviation) %|>%
+  enrichDataBatch(windowSize) %|>%
 
-  enrichData(windowSize, "psdX", populationStandardDeviationByColumn(1)) %|>%
-  enrichData(windowSize, "psdY", populationStandardDeviationByColumn(2)) %|>%
-  enrichData(windowSize, "psdZ", populationStandardDeviationByColumn(3)) %|>%
-  enrichData(windowSize, "psd", populationStandardDeviation) %|>%
+    addComputedColumn("MeanX", movingAverageByColumn(1)) %|>%
+    addComputedColumn("MeanY", movingAverageByColumn(2)) %|>%
+    addComputedColumn("MeanZ", movingAverageByColumn(3)) %|>%
+    addComputedColumn("Mean", movingAverage) %|>%
 
-  enrichData(windowSize, "iqrX", interquartileRangeByColumn(1)) %|>%
-  enrichData(windowSize, "iqrY", interquartileRangeByColumn(2)) %|>%
-  enrichData(windowSize, "iqrZ", interquartileRangeByColumn(3)) %|>%
-  enrichData(windowSize, "iqr", interquartileRange()) %|>%
+    addComputedColumn("ssdX", simpleStandardDeviationByColumn(1)) %|>%
+    addComputedColumn("ssdY", simpleStandardDeviationByColumn(2)) %|>%
+    addComputedColumn("ssdZ", simpleStandardDeviationByColumn(3)) %|>%
+    addComputedColumn("ssd", simpleStandardDeviation) %|>%
 
-  enrichData(windowSize, "madX", meanAbsoluteDeviationByColumn(1)) %|>%
-  enrichData(windowSize, "madY", meanAbsoluteDeviationByColumn(2)) %|>%
-  enrichData(windowSize, "madZ", meanAbsoluteDeviationByColumn(3)) %|>%
-  enrichData(windowSize, "mad", meanAbsoluteDeviation) %|>%
+    addComputedColumn("psdX", populationStandardDeviationByColumn(1)) %|>%
+    addComputedColumn("psdY", populationStandardDeviationByColumn(2)) %|>%
+    addComputedColumn("psdZ", populationStandardDeviationByColumn(3)) %|>%
+    addComputedColumn("psd", populationStandardDeviation) %|>%
 
-  enrichData(windowSize, "skewX", skewnessByColumn(1)) %|>%
-  enrichData(windowSize, "skewY", skewnessByColumn(2)) %|>%
-  enrichData(windowSize, "skewZ", skewnessByColumn(3)) %|>%
-  enrichData(windowSize, "skew", overallSkewness) %|>%
+    addComputedColumn("iqrX", interquartileRangeByColumn(1)) %|>%
+    addComputedColumn("iqrY", interquartileRangeByColumn(2)) %|>%
+    addComputedColumn("iqrZ", interquartileRangeByColumn(3)) %|>%
+    addComputedColumn("iqr", interquartileRange()) %|>%
 
-  enrichData(windowSize, "kurtX", kurtosisByColumn(1)) %|>%
-  enrichData(windowSize, "kurtY", kurtosisByColumn(2)) %|>%
-  enrichData(windowSize, "kurtZ", kurtosisByColumn(3)) %|>%
-  enrichData(windowSize, "kurt", overallKurtosis) %|>%
+    addComputedColumn("madX", meanAbsoluteDeviationByColumn(1)) %|>%
+    addComputedColumn("madY", meanAbsoluteDeviationByColumn(2)) %|>%
+    addComputedColumn("madZ", meanAbsoluteDeviationByColumn(3)) %|>%
+    addComputedColumn("mad", meanAbsoluteDeviation) %|>%
 
-  enrichData(windowSize, "q1X", quartileByColumn(1, 1)) %|>%
-  enrichData(windowSize, "q1Y", quartileByColumn(1, 2)) %|>%
-  enrichData(windowSize, "q1Z", quartileByColumn(1, 3)) %|>%
-  enrichData(windowSize, "q1", overallQuartile(1)) %|>%
+    addComputedColumn("skewX", skewnessByColumn(1)) %|>%
+    addComputedColumn("skewY", skewnessByColumn(2)) %|>%
+    addComputedColumn("skewZ", skewnessByColumn(3)) %|>%
+    addComputedColumn("skew", overallSkewness) %|>%
 
-  enrichData(windowSize, "q2X", quartileByColumn(2, 1)) %|>%
-  enrichData(windowSize, "q2Y", quartileByColumn(2, 2)) %|>%
-  enrichData(windowSize, "q2Z", quartileByColumn(2, 3)) %|>%
-  enrichData(windowSize, "q2", overallQuartile(2)) %|>%
+    addComputedColumn("kurtX", kurtosisByColumn(1)) %|>%
+    addComputedColumn("kurtY", kurtosisByColumn(2)) %|>%
+    addComputedColumn("kurtZ", kurtosisByColumn(3)) %|>%
+    addComputedColumn("kurt", overallKurtosis) %|>%
 
-  enrichData(windowSize, "q3X", quartileByColumn(3, 1)) %|>%
-  enrichData(windowSize, "q3Y", quartileByColumn(3, 2)) %|>%
-  enrichData(windowSize, "q3Z", quartileByColumn(3, 3)) %|>%
-  enrichData(windowSize, "q3", overallQuartile(3)) %|>%
+    addComputedColumn("q1X", quartileByColumn(1, 1)) %|>%
+    addComputedColumn("q1Y", quartileByColumn(1, 2)) %|>%
+    addComputedColumn("q1Z", quartileByColumn(1, 3)) %|>%
+    addComputedColumn("q1", overallQuartile(1)) %|>%
 
-  enrichData(windowSize, "svaX", signalVectorAreaByColumn(1)) %|>%
-  enrichData(windowSize, "svaY", signalVectorAreaByColumn(2)) %|>%
-  enrichData(windowSize, "svaZ", signalVectorAreaByColumn(3)) %|>%
-  enrichData(windowSize, "sva", signalVectorArea) %|>%
+    addComputedColumn("q2X", quartileByColumn(2, 1)) %|>%
+    addComputedColumn("q2Y", quartileByColumn(2, 2)) %|>%
+    addComputedColumn("q2Z", quartileByColumn(2, 3)) %|>%
+    addComputedColumn("q2", overallQuartile(2)) %|>%
 
-  enrichData(windowSize, "entX", entropyByColumn(1)) %|>%
-  enrichData(windowSize, "entY", entropyByColumn(2)) %|>%
-  enrichData(windowSize, "entZ", entropyByColumn(3)) %|>%
-  enrichData(windowSize, "ent", overallEntropy) %|>%
+    addComputedColumn("q3X", quartileByColumn(3, 1)) %|>%
+    addComputedColumn("q3Y", quartileByColumn(3, 2)) %|>%
+    addComputedColumn("q3Z", quartileByColumn(3, 3)) %|>%
+    addComputedColumn("q3", overallQuartile(3)) %|>%
+
+    addComputedColumn("svaX", signalVectorAreaByColumn(1)) %|>%
+    addComputedColumn("svaY", signalVectorAreaByColumn(2)) %|>%
+    addComputedColumn("svaZ", signalVectorAreaByColumn(3)) %|>%
+    addComputedColumn("sva", signalVectorArea) %|>%
+
+    addComputedColumn("entX", entropyByColumn(1)) %|>%
+    addComputedColumn("entY", entropyByColumn(2)) %|>%
+    addComputedColumn("entZ", entropyByColumn(3)) %|>%
+    addComputedColumn("ent", overallEntropy) %|>%
+
+  runBatch() %|>%
 
   # TODO: add more feature calculations here
   saveDataToCsv(outputFile)
