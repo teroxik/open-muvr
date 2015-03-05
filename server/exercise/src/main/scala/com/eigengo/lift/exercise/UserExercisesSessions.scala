@@ -1,13 +1,11 @@
 package com.eigengo.lift.exercise
 
-import java.io.BufferedWriter
 import java.util.{Calendar, Date}
 
 import akka.actor.{ActorRef, ActorLogging, Props}
 import akka.contrib.pattern.ShardRegion
 import akka.persistence.{SnapshotOffer, PersistentView}
 import com.eigengo.lift.common.{AutoPassivation, UserId}
-import com.eigengo.lift.exercise.UserExercisesSessions.GetSuggestions
 import com.eigengo.lift.notification.NotificationProtocol.DataMessagePayload
 import com.eigengo.lift.profile.UserProfileNotifications
 
@@ -192,11 +190,6 @@ object UserExercisesSessions {
   private case class GetExerciseSessionsSummary(startDate: Date, endDate: Date)
 
   /**
-   * Query to provide suggestions for future exercise sessions
-   */
-  private case object GetSuggestions
-
-  /**
    * Get session dates
    */
   private case object GetExerciseSessionsDates
@@ -236,7 +229,6 @@ class UserExercisesSessions(notification: ActorRef, userProfile: ActorRef) exten
 
   // our internal state
   private var exercises = Sessions.empty
-  private var suggestions = Suggestions.empty
 
   // values from the profile
   private val userId = UserId(self.path.name)
@@ -262,9 +254,6 @@ class UserExercisesSessions(notification: ActorRef, userProfile: ActorRef) exten
     case GetExerciseSession(sessionId) ⇒
       log.debug("GetExerciseSession: from userspace.")
       sender() ! exercises.get(sessionId)
-    case GetSuggestions ⇒
-      log.debug("GetSuggestions: from userspace.")
-
   }
 
   private lazy val notExercising: Receive = {
