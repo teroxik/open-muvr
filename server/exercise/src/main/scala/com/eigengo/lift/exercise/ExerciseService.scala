@@ -6,6 +6,7 @@ import akka.actor.ActorRef
 import spray.routing.Directives
 
 import scala.concurrent.ExecutionContext
+import scala.language.postfixOps
 
 trait ExerciseService extends Directives with ExerciseMarshallers {
   import akka.pattern.ask
@@ -99,8 +100,10 @@ trait ExerciseService extends Directives with ExerciseMarshallers {
     } ~
     path("exercise" / UserIdValue / "classification") { userId ⇒
       get {
-        complete {
-          (userExercisesStatistics ? UserExerciseExplicitClassificationExamples(userId, None)).mapTo[List[Exercise]]
+        parameter('muscleGroupKeys.as[String]?) { mgks ⇒
+          complete {
+            (userExercisesStatistics ? UserExerciseExplicitClassificationExamples(userId, None, mgks.map(_.split(",")))).mapRight[List[Exercise]]
+          }
         }
       } ~
       post {
@@ -112,15 +115,13 @@ trait ExerciseService extends Directives with ExerciseMarshallers {
     path("exercise" / UserIdValue / SessionIdValue / "classification") { (userId, sessionId) ⇒
       get {
         complete {
-          (userExercisesStatistics ? UserExerciseExplicitClassificationExamples(userId, Some(sessionId))).mapTo[List[Exercise]]
+          (userExercisesStatistics ? UserExerciseExplicitClassificationExamples(userId, Some(sessionId), None)).mapRight[List[Exercise]]
         }
       } ~
       post {
-        parameter('exerciseName.as[String]) { exerciseName ⇒
-          complete {
-            userExercisesProcessor ! UserExerciseExplicitClassificationStart(userId, sessionId, exerciseName)
-            ()
-          }
+        handleWith { exercise: Exercise ⇒
+          userExercisesProcessor ! UserExerciseExplicitClassificationStart(userId, sessionId, exercise)
+          ()
         }
       } ~
       delete {

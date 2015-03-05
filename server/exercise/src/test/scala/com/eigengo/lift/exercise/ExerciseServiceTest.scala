@@ -62,8 +62,7 @@ object ExerciseServiceTest {
           case UserExerciseSessionEnd(_, _) =>
             sender ! \/.right(())
             TestActor.KeepRunning
-          case UserExerciseExplicitClassificationStart(_, _, _) =>
-            sender ! List(TestData.squatName)
+          case UserExerciseExplicitClassificationStart(_, _, e) =>
             TestActor.KeepRunning
           case UserExerciseSetSuggestions(_, _) ⇒
             sender ! \/.right(())
@@ -193,11 +192,11 @@ class ExerciseServiceTest
   }
 
   it should "listen at POST exercise/:UserIdValue/:SessionIdValue/classification endpoint" in {
-    Post(s"/exercise/${TestData.userId.id}/${TestData.sessionId.id}/classification?exerciseName=${TestData.squatName}") ~> underTest ~> check {
+    Post(s"/exercise/${TestData.userId.id}/${TestData.sessionId.id}/classification", TestData.squat) ~> underTest ~> check {
       response.entity.asString should be(TestData.emptyResponse)
     }
 
-    probe.expectMsg(UserExerciseExplicitClassificationStart(TestData.userId, TestData.sessionId, TestData.squatName))
+    probe.expectMsg(UserExerciseExplicitClassificationStart(TestData.userId, TestData.sessionId, TestData.squat))
   }
 
 }

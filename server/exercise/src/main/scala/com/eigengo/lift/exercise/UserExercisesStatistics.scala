@@ -7,6 +7,9 @@ import com.eigengo.lift.common.UserId
 import com.eigengo.lift.exercise.UserExercises.{SessionEndedEvt, SessionStartedEvt, ExerciseEvt}
 import com.eigengo.lift.exercise.UserExercisesStatistics.ExerciseStatistics.Entry
 
+import scala.language.postfixOps
+import scalaz.\/
+
 object UserExercisesStatistics {
   /** The shard name */
   val shardName = "user-exercises-statistics"
@@ -207,22 +210,23 @@ class UserExercisesStatistics extends PersistentView {
   override val persistenceId: String = s"user-exercises-${userId.toString}"
 
   lazy val queries: Receive = {
-    case ExerciseExplicitClassificationExamples(None, None)       ⇒ sender() ! exerciseStatistics.examples()
-    case ExerciseExplicitClassificationExamples(None, Some(mgks)) ⇒ sender() ! exerciseStatistics.examples(mgks)
+    case ExerciseExplicitClassificationExamples(None, None)       ⇒ sender() ! \/.right(exerciseStatistics.examples())
+    case ExerciseExplicitClassificationExamples(None, Some(mgks)) ⇒ sender() ! \/.right(exerciseStatistics.examples(mgks))
 
-      // TODO: This is not the right handler: it should filter
-    case ExerciseExplicitClassificationExamples(_, _)             ⇒ sender() ! exerciseStatistics.examples()
+    case ExerciseExplicitClassificationExamples(_, _)             ⇒ sender() ! \/.left("No examples")
   }
 
   lazy val notExercising: Receive = {
     case SessionStartedEvt(sessionId, sessionProperties) if isPersistent ⇒
-      context.become(exercising(sessionProperties))
+      context.become(exercising(sessionId, sessionProperties).orElse(queries))
   }
 
-  private def exercising(sessionProperties: SessionProperties): Receive = {
+  private def exercising(sessionId: SessionId, sessionProperties: SessionProperties): Receive = {
+    case ExerciseExplicitClassificationExamples(Some(`sessionId`), _) ⇒
+      sender() ! \/.right(exerciseStatistics.examples(sessionProperties.muscleGroupKeys, sessionProperties.intendedIntensity))
     case ExerciseEvt(_, metadata, exercise) if isPersistent ⇒
       exerciseStatistics = exerciseStatistics.withNewExercise(sessionProperties, exercise)
-    case SessionEndedEvt(_) if isPersistent ⇒ context.become(notExercising) 
+    case SessionEndedEvt(_) if isPersistent ⇒ context.become(notExercising.orElse(queries))
   }
 
   override def receive: Receive = notExercising.orElse(queries)

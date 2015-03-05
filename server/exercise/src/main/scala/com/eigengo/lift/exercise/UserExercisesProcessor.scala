@@ -56,9 +56,9 @@ object UserExercisesProcessor {
    * User classified exercise start.
    * @param userId user
    * @param sessionId session
-   * @param exerciseName the name of the exercise
+   * @param exercise the name of the exercise
    */
-  case class UserExerciseExplicitClassificationStart(userId: UserId, sessionId: SessionId, exerciseName: ExerciseName)
+  case class UserExerciseExplicitClassificationStart(userId: UserId, sessionId: SessionId, exercise: Exercise)
 
   /**
    * Sets the metric of all the exercises in the current set that don't have a metric yet. So, suppose the user is in
@@ -127,9 +127,9 @@ object UserExercisesProcessor {
   /**
    * User marked the start of a classified exercise.
    * @param sessionId session
-   * @param exerciseName the name of the exercise
+   * @param exercise the name of the exercise
    */
-  private case class ExerciseExplicitClassificationStart(sessionId: SessionId, exerciseName: ExerciseName)
+  private case class ExerciseExplicitClassificationStart(sessionId: SessionId, exercise: Exercise)
 
   /**
    * Replay the ``sessionId`` by re-processing all data in ``data``

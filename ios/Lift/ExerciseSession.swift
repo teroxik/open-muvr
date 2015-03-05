@@ -32,17 +32,29 @@ class ExerciseSession : NSObject {
     }
     
     ///
-    /// Obtain classification examples for the given session
+    /// Obtain classification examples for the given session, trying to retrieve the most specific ones
     ///
     func getClassificationExamples(f: Result<[Exercise.Exercise]> -> Void) -> Void {
-        return LiftServer.sharedInstance.exerciseSessionGetClassificationExamples(CurrentLiftUser.userId!, sessionId: id, f)
+        return LiftServer.sharedInstance.exerciseSessionGetClassificationExamples(CurrentLiftUser.userId!, sessionId: id) { x in
+            if x.isSuccess() {
+                f(x)
+            } else {
+                LiftServer.sharedInstance.exerciseGetClassificationExamples(CurrentLiftUser.userId!, muscleGroupKeys: self.props.muscleGroupKeys) { x in
+                    if x.isSuccess() {
+                        f(x)
+                    } else {
+                        LiftServer.sharedInstance.exerciseGetClassificationExamples(CurrentLiftUser.userId!, f)
+                    }
+                }
+            }
+        }
     }
     
     ///
     /// Start explicit classification of the given exercise
     ///
-    func startExplicitClassification(exerciseName: String) -> Void {
-        LiftServer.sharedInstance.exerciseSessionStartExplicitClassification(CurrentLiftUser.userId!, sessionId: id, exerciseName: exerciseName, f: const(()))
+    func startExplicitClassification(exercise: Exercise.Exercise) -> Void {
+        LiftServer.sharedInstance.exerciseSessionStartExplicitClassification(CurrentLiftUser.userId!, sessionId: id, exercise: exercise, f: const(()))
     }
     
     ///

@@ -44,6 +44,16 @@ public enum Result<V> {
         }
     }
     
+    ///
+    /// Indicates if this is a success
+    ///
+    public func isSuccess() -> Bool {
+        switch self {
+        case Error(_): return false
+        case Value(_): return true
+        }
+    }
+    
     /// Catamorphism
     public func cata<B>(l: NSError -> B, r: V -> B) -> B {
         switch self {

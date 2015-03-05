@@ -10,6 +10,8 @@ class UserExercisesStatisticsTest extends FlatSpec with Matchers {
 
   "ExerciseStatistics" should "give examples when empty" in {
     ExerciseStatistics.empty.examples() should be(allExercises)
+
+    println(ExerciseStatistics.empty.examples(Seq("arms")))
   }
 
   "ExerciseStatistics" should "give examples when non-empty" in {
