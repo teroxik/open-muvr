@@ -6,7 +6,8 @@ import java.util.{Calendar, Date}
 import akka.actor.{ActorRef, ActorLogging, Props}
 import akka.contrib.pattern.ShardRegion
 import akka.persistence.{SnapshotOffer, PersistentView}
-import com.eigengo.lift.common.{AutoPassivation, UserId}
+import com.eigengo.lift.Exercise.{Metric, ExerciseIntensity, Exercise}
+import com.eigengo.lift.common.{UserId, AutoPassivation}
 import com.eigengo.lift.notification.NotificationProtocol.DataMessagePayload
 import com.eigengo.lift.profile.UserProfileNotifications
 

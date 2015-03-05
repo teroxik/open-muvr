@@ -1,7 +1,5 @@
 package com.eigengo.lift.profile
 
-import java.awt.{RenderingHints, AlphaComposite}
-import java.awt.image.BufferedImage
 import java.security.MessageDigest
 import java.util
 
@@ -11,7 +9,7 @@ import akka.contrib.pattern.DistributedPubSubMediator.{Publish, Subscribe}
 import akka.persistence.{PersistentActor, SnapshotOffer}
 import com.eigengo.lift.common.UserId
 import com.eigengo.lift.notification.NotificationProtocol.Device
-import com.eigengo.lift.profile.UserProfile.{UserDeviceSet, UserRegistered}
+import com.eigengo.lift.profile.UserProfile.{UserRegistered, UserDeviceSet}
 import com.eigengo.lift.profile.UserProfileProtocol._
 
 import scala.language.postfixOps

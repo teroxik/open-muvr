@@ -2,7 +2,7 @@ package com.eigengo.lift.exercise
 
 import java.util.{Date, UUID}
 
-import com.eigengo.lift.Exercise.{RequestedClassification, ExerciseIntensity, MuscleGroupKey}
+import com.eigengo.lift.Exercise._
 
 /**
  * The session identity
@@ -11,6 +11,7 @@ import com.eigengo.lift.Exercise.{RequestedClassification, ExerciseIntensity, Mu
 @SerialVersionUID(1010l) case class SessionId(id: UUID) extends AnyVal {
   override def toString = id.toString
 }
+
 @SerialVersionUID(1011l) object SessionId {
   def apply(s: String): SessionId = SessionId(UUID.fromString(s))
   def randomId(): SessionId = SessionId(UUID.randomUUID())
@@ -39,7 +40,4 @@ import com.eigengo.lift.Exercise.{RequestedClassification, ExerciseIntensity, Mu
    * The duration between sets
    */
   lazy val restDuration: FiniteDuration = (1.0 / intendedIntensity * brutalRest).seconds
-
-
 }
-

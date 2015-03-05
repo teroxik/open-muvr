@@ -26,7 +26,8 @@ libraryDependencies ++= Seq(
   spark.core,
   spark.mllib,
   spray.client,
-  hadoop.client
+  hadoop.client,
+  scodec_bits
   //spark.streaming,
   //spark.streamingKafka
 )

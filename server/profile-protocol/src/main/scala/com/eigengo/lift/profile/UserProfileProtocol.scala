@@ -7,43 +7,6 @@ object UserProfileProtocol {
   import com.eigengo.lift.notification.NotificationProtocol._
 
   /**
-   * The user profile includes the user's account and registered / known devices
-   * @param account the account
-   * @param devices the known devices
-   * @param publicProfile the public profile
-   */
-  case class Profile(account: Account, devices: Devices, publicProfile: Option[PublicProfile], profileImage: Option[Array[Byte]]) {
-    /**
-     * Adds a device to the profile
-     * @param device the device
-     * @return the updated profile
-     */
-    def withDevice(device: Device) = copy(devices = devices.withNewDevice(device))
-
-    /**
-     * Sets the public profile
-     * @param publicProfile the profile
-     * @return the updated profile
-     */
-    def withPublicProfile(publicProfile: PublicProfile) = copy(publicProfile = Some(publicProfile))
-
-    /**
-     * Sets the profile image
-     * @param profileImage the new profile image
-     * @return the updated profile
-     */
-    def withProfileImage(profileImage: Array[Byte]) = copy(profileImage = Some(profileImage))
-  }
-
-  /**
-   * The user account details
-   * @param email the user's email
-   * @param password the hashed password
-   * @param salt the salt used in hashing
-   */
-  case class Account(email: String, password: Array[Byte], salt: String)
-
-  /**
    * User's public profile
    * @param firstName first name
    * @param lastName last name
@@ -57,6 +20,14 @@ object UserProfileProtocol {
    * @param userId the user identity
    */
   case class UserGetAccount(userId: UserId)
+
+  /**
+   * The user account details
+   * @param email the user's email
+   * @param password the hashed password
+   * @param salt the salt used in hashing
+   */
+  @SerialVersionUID(1017l) case class Account(email: String, password: Array[Byte], salt: String)
 
   /**
    * Get the public account for the given ``userId``
@@ -89,5 +60,34 @@ object UserProfileProtocol {
    * @param userId the user identity
    */
   case class UserGetDevices(userId: UserId)
+
+  /**
+   * The user profile includes the user's account and registered / known devices
+   * @param account the account
+   * @param devices the known devices
+   * @param publicProfile the public profile
+   */
+  case class Profile(account: Account, devices: Devices, publicProfile: Option[PublicProfile], profileImage: Option[Array[Byte]]) {
+    /**
+     * Adds a device to the profile
+     * @param device the device
+     * @return the updated profile
+     */
+    def withDevice(device: Device) = copy(devices = devices.withNewDevice(device))
+
+    /**
+     * Sets the public profile
+     * @param publicProfile the profile
+     * @return the updated profile
+     */
+    def withPublicProfile(publicProfile: PublicProfile) = copy(publicProfile = Some(publicProfile))
+
+    /**
+     * Sets the profile image
+     * @param profileImage the new profile image
+     * @return the updated profile
+     */
+    def withProfileImage(profileImage: Array[Byte]) = copy(profileImage = Some(profileImage))
+  }
 
 }

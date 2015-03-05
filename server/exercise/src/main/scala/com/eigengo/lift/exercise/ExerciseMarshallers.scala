@@ -1,5 +1,6 @@
 package com.eigengo.lift.exercise
 
+import com.eigengo.lift.Exercise.{SuggestionSource, Suggestion, Suggestions}
 import com.eigengo.lift.common.{CommonMarshallers, CommonPathDirectives}
 import java.text.SimpleDateFormat
 import org.json4s.JsonAST._
