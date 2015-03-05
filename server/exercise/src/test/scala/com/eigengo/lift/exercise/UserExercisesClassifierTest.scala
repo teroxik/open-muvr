@@ -3,7 +3,6 @@ package com.eigengo.lift.exercise
 import akka.actor.{ActorRef, ActorSystem, Actor, Props}
 import akka.event.LoggingReceive
 import akka.testkit.{TestKit, TestProbe, TestActorRef}
-import com.eigengo.lift.Exercise.RequestedClassification
 import com.eigengo.lift.exercise.UserExercises.ClassifyExerciseEvt
 import com.typesafe.config.ConfigFactory
 import java.text.SimpleDateFormat
@@ -19,7 +18,7 @@ class UserExercisesClassifierTest
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
   val startDate = dateFormat.parse("1970-01-01")
-  val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0, RequestedClassification.ExplicitClassification)
+  val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
 
   class DummyModel(probe: ActorRef) extends Actor {
     def receive = LoggingReceive {

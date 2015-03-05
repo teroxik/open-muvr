@@ -85,7 +85,7 @@ class RandomExerciseModel(sessionProps: SessionProperties)
           UnclassifiedExercise(metadata)
       }
       .map { exercise =>
-        if (Random.nextInt(50) == 1) {
+        if (Random.nextInt(50000) == 1) {
           Some(exercise)
         } else {
           None

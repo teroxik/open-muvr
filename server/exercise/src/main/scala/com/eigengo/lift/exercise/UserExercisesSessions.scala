@@ -301,9 +301,9 @@ class UserExercisesSessions(notification: ActorRef, userProfile: ActorRef) exten
   }
   
   private def exercising(session: ExerciseSession): Receive = {
-    case ExerciseStartClassificationEvt(_, exerciseName) if isPersistent ⇒
+    case ExerciseStartClassificationEvt(_, exercise) if isPersistent ⇒
       log.debug("ExerciseStartClassificationEvt: exercising -> in a set.")
-      context.become(inASet(session, ExerciseSet(ModelMetadata.user, Exercise(exerciseName, None, None))).orElse(queries))
+      context.become(inASet(session, ExerciseSet(ModelMetadata.user, exercise)).orElse(queries))
 
     case ExerciseEvt(_, metadata, exercise) if isPersistent ⇒
       log.debug("ExerciseEvt: exercising -> in a set.")

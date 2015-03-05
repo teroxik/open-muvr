@@ -6,12 +6,10 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestActor, TestKitBase, TestProbe}
 import com.eigengo.lift.Exercise._
 import com.eigengo.lift.common.UserId
-import com.eigengo.lift.exercise.UserExercisesClassifier.MuscleGroup
 import com.eigengo.lift.exercise.UserExercisesProcessor._
 import com.eigengo.lift.exercise.UserExercisesSessions._
 import org.scalatest.{FlatSpec, Matchers}
-import spray.http.{HttpRequest, ContentTypes, HttpEntity}
-import spray.httpx.marshalling.BasicMarshallers
+import spray.http.{ContentTypes, HttpEntity}
 import spray.testkit.ScalatestRouteTest
 
 import scalaz._
@@ -29,7 +27,7 @@ object ExerciseServiceTest {
     val intensity = Some(1.0)
     val startDate = dateFormat.parse("1970-01-01")
     val endDate = dateFormat.parse("1970-01-01")
-    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0, RequestedClassification.ExplicitClassification)
+    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
     val muscleGroups = List(MuscleGroup("legs", "Legs", List("squat")))
     val sessionSummary = List(SessionSummary(sessionId, sessionProps, Array(1.0)))
     val session = Some(ExerciseSession(sessionId, sessionProps, List(ExerciseSet(List(squat)))))
@@ -65,11 +63,7 @@ object ExerciseServiceTest {
           case UserExerciseSessionEnd(_, _) =>
             sender ! \/.right(())
             TestActor.KeepRunning
-          case UserExerciseExplicitClassificationStart(_, _, _) =>
-            sender ! List(TestData.squatName)
-            TestActor.KeepRunning
-          case UserExerciseExplicitClassificationMark(_, _, _) =>
-            sender ! List(TestData.squat)
+          case UserExerciseExplicitClassificationStart(_, _, e) =>
             TestActor.KeepRunning
           case UserExerciseSetSuggestions(_, _) ⇒
             sender ! \/.right(())
@@ -95,13 +89,13 @@ class ExerciseServiceTest
 
   val probe = ExerciseServiceTest.probe
 
-  val underTest = exerciseRoute(probe.ref, probe.ref)
+  val underTest = exerciseRoute(probe.ref, probe.ref, probe.ref)
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
 
   "The Exercise service" should "listen at GET /exercise/musclegroups endpoint" in {
     Get("/exercise/musclegroups") ~> underTest ~> check {
-      responseAs[List[MuscleGroup]] should be(UserExercisesClassifier.supportedMuscleGroups)
+      responseAs[List[MuscleGroup]] should be(UserExercisesStatistics.supportedMuscleGroups)
     }
   }
 
@@ -199,19 +193,11 @@ class ExerciseServiceTest
   }
 
   it should "listen at POST exercise/:UserIdValue/:SessionIdValue/classification endpoint" in {
-    Post(s"/exercise/${TestData.userId.id}/${TestData.sessionId.id}/classification?exerciseName=${TestData.squatName}") ~> underTest ~> check {
+    Post(s"/exercise/${TestData.userId.id}/${TestData.sessionId.id}/classification", TestData.squat) ~> underTest ~> check {
       response.entity.asString should be(TestData.emptyResponse)
     }
 
-    probe.expectMsg(UserExerciseExplicitClassificationStart(TestData.userId, TestData.sessionId, TestData.squatName))
-  }
-
-  it should "listen at PUT exercise/:UserIdValue/:SessionIdValue/classification endpoint" in {
-    Put(s"/exercise/${TestData.userId.id}/${TestData.sessionId.id}/classification", TestData.squat) ~> underTest ~> check {
-      response.entity.asString should be(TestData.emptyResponse)
-    }
-
-    probe.expectMsg(UserExerciseExplicitClassificationMark(TestData.userId, TestData.sessionId, TestData.squat))
+    probe.expectMsg(UserExerciseExplicitClassificationStart(TestData.userId, TestData.sessionId, TestData.squat))
   }
 
 }

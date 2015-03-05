@@ -23,8 +23,7 @@ extension Exercise.SessionProps {
         let startDate = isoDateFormatter.dateFromString(json["startDate"].stringValue)!
         let muscleGroupKeys = json["muscleGroupKeys"].arrayValue.map { $0.stringValue }
         let intendedIntensity = json["intendedIntensity"].doubleValue
-        let classification = Exercise.RequestedClassification.unmarshal(json["classification"])
-        return Exercise.SessionProps(startDate: startDate, muscleGroupKeys: muscleGroupKeys, intendedIntensity: intendedIntensity, classification: classification)
+        return Exercise.SessionProps(startDate: startDate, muscleGroupKeys: muscleGroupKeys, intendedIntensity: intendedIntensity)
     }
     
     func marshal() -> [String : AnyObject] {
@@ -32,7 +31,6 @@ extension Exercise.SessionProps {
         params["startDate"] = isoDateFormatter.stringFromDate(startDate)
         params["intendedIntensity"] = intendedIntensity
         params["muscleGroupKeys"] = muscleGroupKeys
-        params["classification"] = classification.marshal()
         return params
     }
     
@@ -120,25 +118,6 @@ extension Exercise.MuscleGroup {
             key: json["key"].stringValue,
             title: json["title"].stringValue,
             exercises: json["exercises"].arrayValue.map { $0.stringValue })
-    }
-    
-}
-
-extension Exercise.RequestedClassification {
-    
-    func marshal() -> String {
-        switch self {
-        case .RandomClassification: return "RandomClassification"
-        case .ExplicitClassification: return "ExplicitClassification"
-        }
-    }
-    
-    static func unmarshal(json: JSON) -> Exercise.RequestedClassification {
-        switch json.stringValue {
-        case "RandomClassification": return Exercise.RequestedClassification.RandomClassification
-        case "ExplicitClassification": return Exercise.RequestedClassification.ExplicitClassification
-        default: return Exercise.RequestedClassification.ExplicitClassification
-        }
     }
     
 }

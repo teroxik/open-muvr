@@ -11,18 +11,14 @@ object Exercise {
   /** Muscle group */
   type MuscleGroupKey = String
 
-  /** Requested classification */
-  type RequestedClassification = String
-
-  object RequestedClassification {
-
-    /** Random classification */
-    val RandomClassification = "RandomClassification"
-
-    /** Manual classification */
-    val ExplicitClassification = "ExplicitClassification"
-
-  }
+  /**
+   * Muscle group information
+   *
+   * @param key the key
+   * @param title the title
+   * @param exercises the suggested exercises
+   */
+  case class MuscleGroup(key: String, title: String, exercises: List[String])
 
   /**
    * Adds much greater than and much less than operators to ``ExerciseIntensity`` instances
@@ -30,6 +26,7 @@ object Exercise {
    */
   implicit class ExerciseIntensityOps(intensity: ExerciseIntensity) {
     private val factor = 0.33
+    private val epsilon = 0.1
 
     /**
      * Much greater than operator
@@ -44,6 +41,13 @@ object Exercise {
      * @return true if "this" is much smaller than "that"
      */
     def <<(that: ExerciseIntensity): Boolean = intensity < that - (that * factor)
+
+    /**
+     * Roughly equals (within some ``epsilon``)
+     * @param that the value to compare this to
+     * @return true if this within epsilon of that
+     */
+    def ~~(that: ExerciseIntensity): Boolean = math.abs(intensity - that) < epsilon
   }
 
   /**

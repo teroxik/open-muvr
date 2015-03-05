@@ -57,17 +57,9 @@ object UserExercisesProcessor {
    * User classified exercise start.
    * @param userId user
    * @param sessionId session
-   * @param exerciseName the name of the exercise
+   * @param exercise the name of the exercise
    */
-  case class UserExerciseExplicitClassificationStart(userId: UserId, sessionId: SessionId, exerciseName: ExerciseName)
-
-  /**
-   * User marked an exercise.
-   * @param userId user
-   * @param sessionId session
-   * @param exercise the exercise
-   */
-  case class UserExerciseExplicitClassificationMark(userId: UserId, sessionId: SessionId, exercise: Exercise)
+  case class UserExerciseExplicitClassificationStart(userId: UserId, sessionId: SessionId, exercise: Exercise)
 
   /**
    * Sets the metric of all the exercises in the current set that don't have a metric yet. So, suppose the user is in
@@ -85,13 +77,6 @@ object UserExercisesProcessor {
    * @param metric the received metric
    */
   case class UserExerciseSetExerciseMetric(userId: UserId, sessionId: SessionId, metric: Metric)
-
-  /**
-   * Obtains a list of example exercises for the given session
-   * @param userId the user
-   * @param sessionId the session
-   */
-  case class UserExerciseExplicitClassificationExamples(userId: UserId, sessionId: SessionId)
 
   /**
    * User classification end
@@ -143,22 +128,9 @@ object UserExercisesProcessor {
   /**
    * User marked the start of a classified exercise.
    * @param sessionId session
-   * @param exerciseName the name of the exercise
+   * @param exercise the name of the exercise
    */
-  private case class ExerciseExplicitClassificationStart(sessionId: SessionId, exerciseName: ExerciseName)
-
-  /**
-   * User marked an exercise.
-   * @param sessionId session
-   * @param exercise the exercise
-   */
-  private case class ExerciseExplicitClassificationMark(sessionId: SessionId, exercise: Exercise)
-
-  /**
-   * Obtain list of classification examples
-   * @param sessionId the session
-   */
-  private case class ExerciseExplicitClassificationExamples(sessionId: SessionId)
+  private case class ExerciseExplicitClassificationStart(sessionId: SessionId, exercise: Exercise)
 
   /**
    * Replay the ``sessionId`` by re-processing all data in ``data``
@@ -252,11 +224,7 @@ object UserExercisesProcessor {
     case UserExerciseSessionReplayStart(userId, sessionId, props)             ⇒ (userId.toString, ExerciseSessionReplayStart(sessionId, props))
     case UserExerciseSetSuggestions(userId, suggestions)                      ⇒ (userId.toString, ExerciseSetSuggestions(suggestions))
     case UserExerciseExplicitClassificationStart(userId, sessionId, name)     ⇒ (userId.toString, ExerciseExplicitClassificationStart(sessionId, name))
-    case UserExerciseExplicitClassificationMark(userId, sessionId, exercise)  ⇒ (userId.toString, ExerciseExplicitClassificationMark(sessionId, exercise))
     case UserExerciseExplicitClassificationEnd(userId, sessionId)             ⇒ (userId.toString, ExerciseExplicitClassificationEnd(sessionId))
-    case UserExerciseExplicitClassificationExamples(userId, sessionId)        ⇒ (userId.toString, ExerciseExplicitClassificationExamples(sessionId))
-    case UserExerciseSetExerciseMetric(userId, sessionId, metric)             ⇒ (userId.toString, ExerciseExplicitClassificationExamples(sessionId))
-
   }
 
   /**
@@ -269,9 +237,7 @@ object UserExercisesProcessor {
     case UserExerciseSessionDelete(userId, _)                  ⇒ s"${userId.hashCode() % 10}"
     case UserExerciseSessionAbandon(userId, _)                 ⇒ s"${userId.hashCode() % 10}"
     case UserExerciseExplicitClassificationStart(userId, _, _) ⇒ s"${userId.hashCode() % 10}"
-    case UserExerciseExplicitClassificationMark(userId, _, _)  ⇒ s"${userId.hashCode() % 10}"
-    case UserExerciseExplicitClassificationEnd(userId, _)      ⇒ s"${userId.hashCode() % 10}"
-    case UserExerciseExplicitClassificationExamples(userId, _) ⇒ s"${userId.hashCode() % 10}"
+   case UserExerciseExplicitClassificationEnd(userId, _)       ⇒ s"${userId.hashCode() % 10}"
     case UserExerciseSessionReplayProcessData(userId, _, _)    ⇒ s"${userId.hashCode() % 10}"
     case UserExerciseSessionReplayStart(userId, _, _)          ⇒ s"${userId.hashCode() % 10}"
     case UserExerciseSetSuggestions(userId, _)                 ⇒ s"${userId.hashCode() % 10}"
@@ -387,7 +353,6 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
 
           saveSnapshot(newSession)
           sender() ! \/.right(newId)
-          log.info(s"ExerciseSessionStart: requested classification is ${newSessionProps.classification}")
           registerModelChecking(newSessionProps)
           context.become(exercising(newId, newSessionProps))
         }
@@ -423,21 +388,8 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
       case ExerciseExplicitClassificationStart(`id`, exerciseName) ⇒
         persist(ExerciseStartClassificationEvt(id, exerciseName)) { evt ⇒ }
 
-      case ExerciseExplicitClassificationMark(`id`, exercise) ⇒
-        persist(ExerciseEvt(id, ModelMetadata.user, exercise)) { evt ⇒ }
-
       case ExerciseExplicitClassificationEnd(`id`) ⇒
         self ! NoExercise(ModelMetadata.user)
-
-      case ExerciseExplicitClassificationExamples(`id`) ⇒
-        // TODO: Get examples from statistics view
-        UserExercisesClassifier.supportedMuscleGroups.find { _.key == sessionProps.muscleGroupKeys }
-        val examples = sessionProps.muscleGroupKeys.flatMap { muscleGroup ⇒
-          UserExercisesClassifier.supportedMuscleGroups.find {_.key == muscleGroup }
-        }.flatMap { muscleGroup ⇒
-          muscleGroup.exercises.map { Exercise(_, None, None) }
-        }.toList
-        sender() ! examples
 
       // explicit metrics
       case ExerciseSetExerciseMetric(`id`, metric) ⇒
@@ -447,9 +399,6 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
       case FullyClassifiedExercise(metadata, confidence, exercise) ⇒
         log.info("FullyClassifiedExercise: exercising -> exercising.")
         persist(ExerciseEvt(id, metadata, exercise)) { evt ⇒ }
-
-      case Tap ⇒
-        persist(ExerciseSetExplicitMarkEvt(id)) { evt ⇒ }
 
       case UnclassifiedExercise(_) ⇒
 
@@ -469,7 +418,6 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
         saveSnapshot(evt)
         sender() ! \/.right(evt.sessionId)
         log.info(s"-> exercising(${evt.sessionId})")
-        log.info(s"ExerciseSessionStart: requested classification is ${sessionProps.classification}")
         registerModelChecking(sessionProps)
         context.become(exercising(evt.sessionId, sessionProps))
       }
