@@ -2,6 +2,8 @@ package com.eigengo.lift
 
 import java.util.Date
 
+import com.eigengo.lift.exercise.UserExercisesSessions.Sessions
+
 package object exercise {
   /** The exercise */
   type ExerciseName = String
@@ -122,6 +124,13 @@ package object exercise {
      * @param source the source
      */
     case class Rest(date: Date, source: SuggestionSource) extends Suggestion
+  }
+
+  /**
+   * Companion object for suggestions providing initialization of default state
+   */
+  object Suggestions {
+    val empty: Suggestions = Suggestions(List.empty)
   }
 
   /**
