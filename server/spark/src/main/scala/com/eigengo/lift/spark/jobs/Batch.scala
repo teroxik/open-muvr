@@ -13,18 +13,6 @@ import scala.concurrent.Future
 trait Batch[P, R] extends App {
 
   /**
-   * Could help to have compatibility with submit job scripts
-   */
-  //override def main(args: Array[String]) = submit[P, R](this, defaultParams(args.asInstanceOf))
-
-  /**
-   * Parser for default parameters when run using Spark submit script
-   * @param args command line parameters
-   * @return parameters as type P
-   */
-  def defaultParams(args: Array[String]): P
-
-  /**
    * Name of the job
    * @return name of the job
    */

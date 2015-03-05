@@ -3,6 +3,7 @@ package com.eigengo.lift.exercise
 import java.util.{Date, UUID}
 
 import akka.actor.ActorRef
+import com.eigengo.lift.Exercise.{Suggestions, Exercise, Metric}
 import com.eigengo.lift.exercise.UserExercisesProcessor._
 import com.eigengo.lift.exercise.UserExercisesSessions._
 import spray.routing.Directives

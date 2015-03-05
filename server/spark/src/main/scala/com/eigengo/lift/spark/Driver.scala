@@ -27,6 +27,8 @@ trait Driver {
 
   private val logger = LoggerFactory.getLogger(classOf[Driver])
 
+  //TODO: Add proper management of SparkContexts
+  //TODO: Add management of SparkContext config
   private val sc = sparkContext("Spark Driver",  (c, conf) => {
     conf.set("spark.cassandra.connection.host", c.getString("cassandra.host"))
     .set("spark.cassandra.journal.keyspace", "akka")
@@ -52,13 +54,10 @@ trait Driver {
    * @return Left(String) in case of failure, Right(R) otherwise
    */
   def submit[P, R](job: Batch[P, R], jobParam: P): Future[Either[String, R]] = {
-    //val sc = sparkContext(job.name, job.additionalConfig)
-
     logger.info(s"Executing job ${job.name} on master $master")
     val result = job.execute(sc, config, jobParam)
     logger.info(s"Job ${job.name} finished with result $result")
 
-    //sc.stop()
     result
   }
 
@@ -75,13 +74,10 @@ trait Driver {
       job: SparkContext => Future[Either[String, R]],
       additionalConfig: (Config, SparkConf) => SparkConf = (x, y) => y): Future[Either[String, R]] = {
 
-    //val sc = sparkContext(name, additionalConfig)
-
     logger.info(s"Executing job ${name} on master $master")
     val result = job(sc)
     logger.info(s"Job ${name} finished with result $result")
 
-    //sc.stop()
     result
   }
 

@@ -420,7 +420,7 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
         val join = builder.add(Zip[Option[ClassifiedExercise], ActorRef]())
         val query = toWatch.head
 
-        Source(ActorPublisher(self)) ~> split.in
+        Source(ActorPublisher.apply[(SensorNetValue, ActorRef)](self)) ~> split.in
         // 2 element sliding window allows workflow to look ahead one step and determine if the event trace is in its last state or not
         split.out0 ~> workflow.transform(() => SlidingWindow[BindToSensors](2)) ~> evaluate(query) ~> makeDecision(query) ~> join.in0
         split.out1 ~> join.in1
@@ -435,7 +435,7 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
         val listener = builder.add(Broadcast[ActorRef](toWatch.size))
         val event = builder.add(Broadcast[List[BindToSensors]](toWatch.size))
 
-        Source(ActorPublisher(self)) ~> split.in
+        Source(ActorPublisher.apply[(SensorNetValue, ActorRef)](self)) ~> split.in
         // 2 element sliding window allows workflow to look ahead one step and determine if the event trace is in its last state or not
         split.out0 ~> workflow.transform(() => SlidingWindow[BindToSensors](2)) ~> event
         split.out1 ~> listener
