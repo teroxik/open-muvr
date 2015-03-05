@@ -2,6 +2,7 @@ package com.eigengo.lift.exercise.classifiers.model
 
 import akka.actor.{ActorLogging, Actor}
 import akka.stream.scaladsl._
+import com.eigengo.lift.Exercise.Exercise
 import com.eigengo.lift.exercise.UserExercises.ModelMetadata
 import com.eigengo.lift.exercise.UserExercisesClassifier.{UnclassifiedExercise, FullyClassifiedExercise}
 import com.eigengo.lift.exercise.classifiers.ExerciseModel

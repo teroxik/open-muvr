@@ -3,7 +3,7 @@ package com.eigengo.lift.spark
 import akka.actor.{ActorLogging, Props, Actor}
 import com.eigengo.lift.spark.JobManagerProtocol.{BatchJobSubmitFunction, BatchJobSubmit, StreamJobSubmit, JobManagerProtocol}
 import com.eigengo.lift.spark.jobs.Job
-import com.eigengo.lift.spark.jobs.suggestions.TestSuggestionsJob
+import com.eigengo.lift.spark.jobs.suggestions.SuggestionsJob
 import com.typesafe.config.Config
 import org.apache.spark.SparkContext
 import akka.pattern.{PipeToSupport}
@@ -81,7 +81,7 @@ class JobManager(
         submit(name, func)
 
       case BatchJobSubmit('Suggestions) =>
-          submit(Job[TestSuggestionsJob], ()).pipeTo(self)
+          submit(Job[SuggestionsJob], ()).pipeTo(self)
 
       case x => log.warning(s"Not a job $x")
     }

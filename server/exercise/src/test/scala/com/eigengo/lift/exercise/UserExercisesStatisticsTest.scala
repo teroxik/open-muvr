@@ -2,6 +2,7 @@ package com.eigengo.lift.exercise
 
 import java.util.Date
 
+import com.eigengo.lift.Exercise.Exercise
 import org.scalatest.{Matchers, FlatSpec}
 
 class UserExercisesStatisticsTest extends FlatSpec with Matchers {

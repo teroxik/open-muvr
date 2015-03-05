@@ -4,7 +4,8 @@ import akka.actor._
 import akka.contrib.pattern.ShardRegion
 import akka.contrib.pattern.ShardRegion.Passivate
 import akka.persistence.{PersistentActor, SnapshotOffer}
-import com.eigengo.lift.common.{AutoPassivation, UserId}
+import com.eigengo.lift.Exercise.{Suggestions, Metric, Exercise, ExerciseName}
+import com.eigengo.lift.common.{UserId, AutoPassivation}
 import java.io.FileOutputStream
 import com.eigengo.lift.exercise.classifiers.ExerciseModelChecking
 import com.eigengo.lift.notification.NotificationProtocol.DataMessagePayload

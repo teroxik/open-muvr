@@ -3,6 +3,7 @@ package com.eigengo.lift.exercise
 import akka.actor.Props
 import akka.contrib.pattern.ShardRegion
 import akka.persistence.PersistentView
+import com.eigengo.lift.Exercise._
 import com.eigengo.lift.common.UserId
 import com.eigengo.lift.exercise.UserExercises.{SessionEndedEvt, SessionStartedEvt, ExerciseEvt}
 import com.eigengo.lift.exercise.UserExercisesStatistics.ExerciseStatistics.Entry

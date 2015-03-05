@@ -58,6 +58,9 @@ sealed trait Suggestion {
 /** Holds implementations of ``Suggestion`` */
 object Suggestion {
 
+  /** The exercise */
+  type ExerciseName = String
+
   type MuscleGroupKey = String
 
   type ExerciseIntensity = Double

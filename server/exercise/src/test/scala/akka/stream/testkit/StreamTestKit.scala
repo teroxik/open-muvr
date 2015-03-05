@@ -3,12 +3,14 @@
  */
 package akka.stream.testkit
 
+import scala.language.existentials
 import akka.actor.ActorSystem
 import akka.stream.impl.{ EmptyPublisher, ErrorPublisher }
 import akka.testkit.TestProbe
 import org.reactivestreams.{ Publisher, Subscriber, Subscription }
-
 import scala.concurrent.duration.FiniteDuration
+import akka.actor.DeadLetterSuppression
+import scala.util.control.NoStackTrace
 
 // TODO: until `akka-stream-testkit-experimental` package is released, we need a copy of this file for testing
 
@@ -37,12 +39,12 @@ object StreamTestKit {
       subscriber.onSubscribe(FailedSubscription(subscriber, cause))
   }
 
-  private case class FailedSubscription[T](subscriber: Subscriber[T], cause: Throwable) extends Subscription {
+  private final case class FailedSubscription[T](subscriber: Subscriber[T], cause: Throwable) extends Subscription {
     override def request(elements: Long): Unit = subscriber.onError(cause)
     override def cancel(): Unit = ()
   }
 
-  private case class CompletedSubscription[T](subscriber: Subscriber[T]) extends Subscription {
+  private final case class CompletedSubscription[T](subscriber: Subscriber[T]) extends Subscription {
     override def request(elements: Long): Unit = subscriber.onComplete()
     override def cancel(): Unit = ()
   }
@@ -62,18 +64,18 @@ object StreamTestKit {
     def sendError(cause: Exception): Unit = subscription.sendError(cause)
   }
 
-  sealed trait SubscriberEvent
-  case class OnSubscribe(subscription: Subscription) extends SubscriberEvent
-  case class OnNext[I](element: I) extends SubscriberEvent
-  case object OnComplete extends SubscriberEvent
-  case class OnError(cause: Throwable) extends SubscriberEvent
+  sealed trait SubscriberEvent extends DeadLetterSuppression
+  final case class OnSubscribe(subscription: Subscription) extends SubscriberEvent
+  final case class OnNext[I](element: I) extends SubscriberEvent
+  final case object OnComplete extends SubscriberEvent
+  final case class OnError(cause: Throwable) extends SubscriberEvent
 
-  sealed trait PublisherEvent
-  case class Subscribe(subscription: Subscription) extends PublisherEvent
-  case class CancelSubscription(subscription: Subscription) extends PublisherEvent
-  case class RequestMore(subscription: Subscription, elements: Long) extends PublisherEvent
+  sealed trait PublisherEvent extends DeadLetterSuppression
+  final case class Subscribe(subscription: Subscription) extends PublisherEvent
+  final case class CancelSubscription(subscription: Subscription) extends PublisherEvent
+  final case class RequestMore(subscription: Subscription, elements: Long) extends PublisherEvent
 
-  case class PublisherProbeSubscription[I](subscriber: Subscriber[_ >: I], publisherProbe: TestProbe) extends Subscription {
+  final case class PublisherProbeSubscription[I](subscriber: Subscriber[_ >: I], publisherProbe: TestProbe) extends Subscription {
     def request(elements: Long): Unit = publisherProbe.ref ! RequestMore(this, elements)
     def cancel(): Unit = publisherProbe.ref ! CancelSubscription(this)
 
@@ -118,8 +120,8 @@ object StreamTestKit {
         case OnNext(n)        ⇒ true
         case OnError(`cause`) ⇒ true
       } match {
-        case OnNext(n: I) ⇒ Right(n)
-        case OnError(err) ⇒ Left(err)
+        case OnNext(n: I @unchecked) ⇒ Right(n)
+        case OnError(err)            ⇒ Left(err)
       }
     }
 
@@ -177,4 +179,6 @@ object StreamTestKit {
 
     def getPublisher: Publisher[I] = this
   }
+
+  case class TE(message: String) extends RuntimeException(message) with NoStackTrace
 }

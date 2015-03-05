@@ -4,6 +4,7 @@ import java.text.SimpleDateFormat
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestActor, TestKitBase, TestProbe}
+import com.eigengo.lift.Exercise._
 import com.eigengo.lift.common.UserId
 import com.eigengo.lift.exercise.UserExercisesProcessor._
 import com.eigengo.lift.exercise.UserExercisesSessions._
