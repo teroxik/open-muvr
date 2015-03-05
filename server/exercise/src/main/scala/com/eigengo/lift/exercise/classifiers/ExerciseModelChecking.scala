@@ -2,7 +2,8 @@ package com.eigengo.lift.exercise.classifiers
 
 import akka.actor.{Props, ActorRef, Actor}
 import com.eigengo.lift.exercise.classifiers.model.RandomExerciseModel
-import com.eigengo.lift.exercise.{SessionProperties, UserExercisesClassifier}
+import com.eigengo.lift.exercise._
+import com.eigengo.lift.exercise.RequestedClassification._
 
 trait ExerciseModelChecking {
   this: Actor =>
@@ -11,7 +12,10 @@ trait ExerciseModelChecking {
 
   def registerModelChecking(sessionProps: SessionProperties): Unit = {
     classifier.foreach(context.stop)
-    classifier = Some(context.actorOf(UserExercisesClassifier.props(sessionProps, Props(new RandomExerciseModel(sessionProps)))))
+    classifier = sessionProps.classification match {
+      case RandomClassification ⇒ Some(context.actorOf(UserExercisesClassifier.props(sessionProps, Props(new RandomExerciseModel(sessionProps)))))
+      case ExplicitClassification ⇒ None
+    }
   }
   
   def unregisterModelChecking(): Unit = {

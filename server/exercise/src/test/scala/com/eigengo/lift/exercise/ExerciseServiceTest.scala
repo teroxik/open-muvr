@@ -6,10 +6,12 @@ import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestActor, TestKitBase, TestProbe}
 import com.eigengo.lift.common.UserId
 import com.eigengo.lift.exercise.UserExercisesClassifier.MuscleGroup
+import com.eigengo.lift.exercise.RequestedClassification._
 import com.eigengo.lift.exercise.UserExercisesProcessor._
 import com.eigengo.lift.exercise.UserExercisesSessions._
 import org.scalatest.{FlatSpec, Matchers}
 import spray.http.{HttpRequest, ContentTypes, HttpEntity}
+import spray.httpx.marshalling.BasicMarshallers
 import spray.testkit.ScalatestRouteTest
 
 import scalaz._
@@ -22,11 +24,12 @@ object ExerciseServiceTest {
     val userId = UserId.randomId()
     val sessionId = SessionId.randomId()
 
-    val squat = Exercise("squat", Some(1.0), None)
+    val squatName = "squat"
+    val squat = Exercise(squatName, Some(1.0), None)
     val intensity = Some(1.0)
     val startDate = dateFormat.parse("1970-01-01")
     val endDate = dateFormat.parse("1970-01-01")
-    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
+    val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0, ExplicitClassification)
     val muscleGroups = List(MuscleGroup("legs", "Legs", List("squat")))
     val sessionSummary = List(SessionSummary(sessionId, sessionProps, Array(1.0)))
     val session = Some(ExerciseSession(sessionId, sessionProps, List(ExerciseSet(List(squat)))))
@@ -63,6 +66,9 @@ object ExerciseServiceTest {
             sender ! \/.right(())
             TestActor.KeepRunning
           case UserExerciseExplicitClassificationStart(_, _, _) =>
+            sender ! List(TestData.squatName)
+            TestActor.KeepRunning
+          case UserExerciseExplicitClassificationMark(_, _, _) =>
             sender ! List(TestData.squat)
             TestActor.KeepRunning
           case UserExerciseSetSuggestions(_, _) ⇒
@@ -193,10 +199,19 @@ class ExerciseServiceTest
   }
 
   it should "listen at POST exercise/:UserIdValue/:SessionIdValue/classification endpoint" in {
-    Post(s"/exercise/${TestData.userId.id}/${TestData.sessionId.id}/classification", TestData.squat) ~> underTest ~> check {
+    Post(s"/exercise/${TestData.userId.id}/${TestData.sessionId.id}/classification?exerciseName=${TestData.squatName}") ~> underTest ~> check {
       response.entity.asString should be(TestData.emptyResponse)
     }
 
-    probe.expectMsg(UserExerciseExplicitClassificationStart(TestData.userId, TestData.sessionId, TestData.squat))
+    probe.expectMsg(UserExerciseExplicitClassificationStart(TestData.userId, TestData.sessionId, TestData.squatName))
   }
+
+  it should "listen at PUT exercise/:UserIdValue/:SessionIdValue/classification endpoint" in {
+    Put(s"/exercise/${TestData.userId.id}/${TestData.sessionId.id}/classification", TestData.squat) ~> underTest ~> check {
+      response.entity.asString should be(TestData.emptyResponse)
+    }
+
+    probe.expectMsg(UserExerciseExplicitClassificationMark(TestData.userId, TestData.sessionId, TestData.squat))
+  }
+
 }

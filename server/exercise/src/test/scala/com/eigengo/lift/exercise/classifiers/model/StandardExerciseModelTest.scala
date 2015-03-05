@@ -7,7 +7,8 @@ import akka.testkit.TestActorRef
 import com.eigengo.lift.exercise.UserExercisesClassifier.{Tap => TapEvent}
 import com.eigengo.lift.exercise.classifiers.ExerciseModel
 import com.eigengo.lift.exercise.classifiers.workflows.ClassificationAssertions.{Neg, Gesture, BindToSensors}
-import com.eigengo.lift.exercise.{SensorDataSourceLocationWrist, AccelerometerValue, SensorNetValue, SessionProperties}
+import com.eigengo.lift.exercise._
+import com.eigengo.lift.exercise.RequestedClassification._
 import com.typesafe.config.ConfigFactory
 import java.text.SimpleDateFormat
 import scala.concurrent.{ExecutionContext, Future}
@@ -28,7 +29,7 @@ class StandardExerciseModelTest extends AkkaSpec(ConfigFactory.load("classificat
   val threshold = system.settings.config.getDouble(s"classification.gesture.$name.threshold")
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
   val startDate = dateFormat.parse("1970-01-01")
-  val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
+  val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0, RandomClassification)
   val accelerometerData = Option(getClass.getResource(s"/samples/$name.csv")).map { dataFile =>
     IOSource.fromURL(dataFile, "UTF-8").getLines().map(line => { val List(x, y, z) = line.split(",").toList.map(_.toInt); AccelerometerValue(x, y, z) })
   }.get.toList
@@ -41,7 +42,7 @@ class StandardExerciseModelTest extends AkkaSpec(ConfigFactory.load("classificat
 
   "StandardExerciseModel workflow" must {
 
-    def component(in: Source[SensorNetValue], out: Sink[BindToSensors]) = {
+    def component(in: Source[SensorNetValue, _], out: Sink[BindToSensors, _]) = {
       val workflow = TestActorRef(new StandardExerciseModel(sessionProps, SensorDataSourceLocationWrist) {
         def makeDecision(query: Query) = Flow[QueryValue].map(_ => Some(TapEvent))
       }).underlyingActor.workflow

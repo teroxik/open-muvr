@@ -2,8 +2,6 @@ package com.eigengo.lift.exercise
 
 import com.eigengo.lift.exercise.UserExercises.ClassifyExerciseEvt
 import java.util.Date
-import com.eigengo.lift.exercise.classifiers.model.ModelGenerators
-import com.eigengo.lift.exercise.classifiers.workflows.ClassificationAssertions.{Fact, BindToSensors}
 import org.scalacheck.Arbitrary._
 import org.scalacheck.Gen
 import org.scalacheck.Gen._
@@ -40,7 +38,8 @@ trait ExerciseGenerators {
       date <- arbitrary[Long].map(t => new Date(t))
       group <- listOf(arbitrary[String])
       intensity <- Gen.choose[Double](0, 1) suchThat (_ > 0)
-    } yield SessionProperties(date, group, intensity)
+      classifier <- Gen.oneOf(Seq(RequestedClassification.ExplicitClassification, RequestedClassification.RandomClassification))
+    } yield SessionProperties(date, group, intensity, classifier)
 
   // Generator ensures that `sensorData` list has information for each known sensor
   def ClassifyExerciseEvtGen(width: Int, height: Int): Gen[ClassifyExerciseEvt] =
