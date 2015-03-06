@@ -6,6 +6,7 @@ import akka.actor.ActorRef
 import com.eigengo.lift.Exercise.{Suggestions, Exercise, Metric}
 import com.eigengo.lift.exercise.UserExercisesProcessor._
 import com.eigengo.lift.exercise.UserExercisesSessions._
+import com.eigengo.lift.exercise.UserExerciseSuggestions._
 import spray.routing.Directives
 
 import scala.concurrent.ExecutionContext
@@ -14,7 +15,7 @@ trait ExerciseService extends Directives with ExerciseMarshallers {
   import akka.pattern.ask
   import com.eigengo.lift.common.Timeouts.defaults._
 
-  def exerciseRoute(userExercisesProcessor: ActorRef, userExercisesSessions: ActorRef)(implicit ec: ExecutionContext) =
+  def exerciseRoute(userExercisesProcessor: ActorRef, userExercisesSessions: ActorRef, userExercisesSuggestions: ActorRef)(implicit ec: ExecutionContext) =
     path("exercise" / "musclegroups") {
       get {
         complete {
@@ -97,10 +98,11 @@ trait ExerciseService extends Directives with ExerciseMarshallers {
         }
       }
     } ~
-    path("exercise" / UserIdValue / "classification") { userId ⇒
+    path("exercise" / UserIdValue / "suggestions") { userId ⇒
       get {
-        // TODO: Tam, when your statistics view is done, reply here with the result
-        complete("{}")
+        complete {
+          (userExercisesSuggestions ? UserGetExerciseSuggestions(userId)).mapTo[Suggestions]
+        }
       } ~
       post {
         handleWith { suggestions: Suggestions ⇒

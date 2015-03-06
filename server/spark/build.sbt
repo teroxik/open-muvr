@@ -49,7 +49,7 @@ dockerfile in docker := {
     from("martinz/spark-singlenode:latest")
     add(artifact, artifactTargetPath)
     //run("sh", "/root/spark_singlenode_files/default_cmd")
-    //entryPoint("java", "-jar", artifactTargetPath)
+      //entryPoint("java", "-jar", artifactTargetPath)
     entryPoint("sh", "/root/spark_singlenode_files/default_cmd", artifactTargetPath)
   }
 }

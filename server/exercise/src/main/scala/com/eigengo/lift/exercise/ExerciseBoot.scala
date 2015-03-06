@@ -8,13 +8,13 @@ import spray.routing.Route
 
 import scala.concurrent.ExecutionContext
 
-case class ExerciseBoot(userExercises: ActorRef, userExercisesView: ActorRef) extends BootedNode {
+case class ExerciseBoot(userExercises: ActorRef, userExercisesView: ActorRef, userExercisesSuggestions: ActorRef) extends BootedNode {
   /**
    * Starts the route given the exercise boot
    * @param ec the execution context
    * @return the route
    */
-  def route(ec: ExecutionContext): Route = exerciseRoute(userExercises, userExercisesView)(ec)
+  def route(ec: ExecutionContext): Route = exerciseRoute(userExercises, userExercisesView, userExercisesSuggestions)(ec)
 
   override def api: Option[(ExecutionContext) ⇒ Route] = Some(route)
 }
@@ -39,8 +39,13 @@ object ExerciseBoot extends ExerciseService {
       entryProps = Some(UserExercisesSessions.props(notification, profile)),
       idExtractor = UserExercisesSessions.idExtractor,
       shardResolver = UserExercisesSessions.shardResolver)
+    val userExercisesSuggestions = ClusterSharding(system).start(
+      typeName = UserExerciseSuggestions.shardName,
+      entryProps = Some(UserExerciseSuggestions.props()),
+      idExtractor = UserExerciseSuggestions.idExtractor,
+      shardResolver = UserExerciseSuggestions.shardResolver)
 
-    ExerciseBoot(userExercise, userExerciseView)
+    ExerciseBoot(userExercise, userExerciseView, userExercisesSuggestions)
   }
 
 }
