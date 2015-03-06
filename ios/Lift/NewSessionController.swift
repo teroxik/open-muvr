@@ -100,7 +100,7 @@ class NewSessionPropsController : UIViewController, UITableViewDelegate, UITable
     }
     
     func startSession(muscleGroupKeys: [Exercise.MuscleGroupKey], intensity: Exercise.ExerciseIntensity) -> Void {
-        let props = Exercise.SessionProps(startDate: NSDate(), muscleGroupKeys: muscleGroupKeys, intendedIntensity: intensity.intensity, classification: .ExplicitClassification)
+        let props = Exercise.SessionProps(startDate: NSDate(), muscleGroupKeys: muscleGroupKeys, intendedIntensity: intensity.intensity)
         LiftServer.sharedInstance.exerciseSessionStart(CurrentLiftUser.userId!, props: props) {
             $0.cata({ x in self.segueToStartedSession(props, sessionId: NSUUID(), isOffline: true) },
                     { x in self.segueToStartedSession(props, sessionId: x, isOffline: false) })

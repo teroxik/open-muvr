@@ -35,22 +35,57 @@ object MultiPacketToCSV extends App {
 
   val decoderBuffer = BitVector.fromMmap(fIn).toByteBuffer
 
+  // List of sensors that we expect to be transmitting data
+  var sensors: Option[Set[(SensorDataSourceLocation, Int)]] = None
+
   try {
     fOut.write("\"timestamp\",\"location\",\"rate\",\"type\",\"x\",\"y\",\"z\"\n")
     while (true) {
       for (block <- MultiPacketDecoder.decode(decoderBuffer)) {
-        for ((pkt, index) <- block.packets.zipWithIndex) {
-          for (data <- RootSensorDataDecoder(decoderSupport: _*).decodeAll(pkt.payload)) {
+        // Extract unique set of known sensors (we use the first multipacket to determine this)
+        sensors = Some(sensors.getOrElse({
+          val sensorLocations = block.packets.map(_.sourceLocation).toSet
+
+          for {
+            location <- sensorLocations
+            index <- 0 until block.packets.count(_.sourceLocation == location)
+          } yield (location, index)
+        }))
+
+        for ((location, index) <- sensors.get) {
+          val packets = block.packets.filter(_.sourceLocation == location)
+          val allBlocks = block.packets.map(p => RootSensorDataDecoder(decoderSupport: _*).decodeAll(p.payload))
+          // We are able to correctly decode all sensor packet blocks
+          assert(allBlocks.forall(_.isRight))
+          val decodedBlocks = allBlocks.map(_.toOption.get)
+          val blocks = packets.map(p => RootSensorDataDecoder(decoderSupport: _*).decodeAll(p.payload)).map(_.toOption.get)
+          // All packet blocks are non-empty
+          assert(decodedBlocks.nonEmpty && decodedBlocks.forall(_.nonEmpty))
+          val blockTime = decodedBlocks.head.head.values.length
+          // All sensor packet blocks have a common size
+          assert(decodedBlocks.forall(_.forall(_.values.length == blockTime)))
+          val samplingRate = decodedBlocks.head.head.samplingRate
+          // All sensor packet blocks have a common sampling rate
+          assert(decodedBlocks.forall(_.forall(_.samplingRate == samplingRate)))
+
+          if (packets.isEmpty) {
+            // Missing sensor data detected - so we need to emit zero padding here!
+            println(s"WARNING: sensor data missing for $location.$index - zero padding from ${(block.timestamp - 1) * blockTime} - ${block.timestamp * blockTime} inserted")
+            for (offset <- 0 until blockTime) {
+              fOut.write(s"${(block.timestamp - 1) * blockTime + offset},$location.$index,$samplingRate,AccelerometerValue,0,0,0\n")
+            }
+          } else {
+            // Sensor data present
+            val data = blocks(index)
+
             data.foreach { d =>
-                val blockTime = d.values.length
+              d.values.zipWithIndex.foreach {
+                case (v: AccelerometerValue, offset) =>
+                  fOut.write(s"${(block.timestamp - 1) * blockTime + offset},$location.$index,$samplingRate,AccelerometerValue,${v.x},${v.y},${v.z}\n")
 
-                d.values.zipWithIndex.foreach {
-                  case (v: AccelerometerValue, offset) =>
-                    fOut.write(s"${(block.timestamp - 1) * blockTime + offset},${pkt.sourceLocation}.$index,${d.samplingRate},AccelerometerValue,${v.x},${v.y},${v.z}\n")
-
-                  case (v: RotationValue, offset) =>
-                    fOut.write(s"${(block.timestamp - 1) * blockTime + offset},${pkt.sourceLocation}.$index,${d.samplingRate},RotationValue,${v.x},${v.y},${v.z}\n")
-                }
+                case (v: RotationValue, offset) =>
+                  fOut.write(s"${(block.timestamp - 1) * blockTime + offset},$location.$index,$samplingRate,RotationValue,${v.x},${v.y},${v.z}\n")
+              }
             }
           }
         }

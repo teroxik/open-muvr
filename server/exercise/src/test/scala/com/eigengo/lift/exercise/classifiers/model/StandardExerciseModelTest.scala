@@ -4,7 +4,6 @@ import akka.stream.{ActorFlowMaterializer, ActorFlowMaterializerSettings}
 import akka.stream.scaladsl._
 import akka.stream.testkit.{StreamTestKit, AkkaSpec}
 import akka.testkit.TestActorRef
-import com.eigengo.lift.Exercise.RequestedClassification
 import com.eigengo.lift.exercise.UserExercisesClassifier.{Tap => TapEvent}
 import com.eigengo.lift.exercise.classifiers.ExerciseModel
 import com.eigengo.lift.exercise.classifiers.workflows.ClassificationAssertions.{Neg, Gesture, BindToSensors}
@@ -29,7 +28,7 @@ class StandardExerciseModelTest extends AkkaSpec(ConfigFactory.load("classificat
   val threshold = system.settings.config.getDouble(s"classification.gesture.$name.threshold")
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
   val startDate = dateFormat.parse("1970-01-01")
-  val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0, RequestedClassification.RandomClassification)
+  val sessionProps = SessionProperties(startDate, Seq("Legs"), 1.0)
   val accelerometerData = Option(getClass.getResource(s"/samples/$name.csv")).map { dataFile =>
     IOSource.fromURL(dataFile, "UTF-8").getLines().map(line => { val List(x, y, z) = line.split(",").toList.map(_.toInt); AccelerometerValue(x, y, z) })
   }.get.toList
@@ -52,7 +51,7 @@ class StandardExerciseModelTest extends AkkaSpec(ConfigFactory.load("classificat
     "correctly detect wrist sensor taps" in {
       // FIXME: is this correct?
       val msgs: List[SensorNetValue] = accelerometerData.map(d => SensorNetValue(Vector(d), Vector(dummyValue), Vector(dummyValue), Vector(dummyValue), Vector(dummyValue)))
-      val tapIndex = List(256 until 290, 341 until 344, 379 until 408, 546 until 577).flatten.toList
+      val tapIndex = List(380 until 382, 383 until 389, 390 until 393, 394 until 401, 402 until 404, 549 until 556, 557 until 559, 561 until 570).flatten.toList
       // Simulate source that outputs messages and then blocks
       val in = PublisherProbe[SensorNetValue]()
       val out = SubscriberProbe[BindToSensors]()

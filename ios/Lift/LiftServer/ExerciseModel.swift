@@ -38,16 +38,6 @@ struct Exercise {
     }
     
     ///
-    /// Represents the requested classification modelling for a session
-    ///
-    enum RequestedClassification {
-        /// No automatic classification, the user will classify the exercises explicitly.
-        case ExplicitClassification
-        /// Classification by the random classifier
-        case RandomClassification
-    }
-    
-    ///
     /// Session properties
     ///
     struct SessionProps {
@@ -57,8 +47,6 @@ struct Exercise {
         var muscleGroupKeys: [String]
         /// the intended intensity
         var intendedIntensity: ExerciseIntensityKey
-        /// th requested classification method
-        var classification: RequestedClassification
     }
     
     /// Metric

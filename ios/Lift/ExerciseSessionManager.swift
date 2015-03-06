@@ -176,6 +176,10 @@ class ExerciseSessionManager {
             handle.closeFile()
         }
         
+        func appendExplicitClassification(exercise: Exercise.Exercise) {
+            // TODO: Write exercise
+        }
+        
     }
     
 }
@@ -186,6 +190,8 @@ class ExerciseSessionManager {
 protocol ManagedExerciseSessionIO {
     
     func appendMultiPacket(mp: NSData)
+    
+    func appendExplicitClassification(exercise: Exercise.Exercise)
 
     func remove()
     
@@ -264,15 +270,11 @@ class ManagedExerciseSession : ExerciseSession {
         managedSession.getClassificationExamples(f)
     }
     
-    override func startExplicitClassification(exerciseName: String) -> Void {
+    override func startExplicitClassification(exercise: Exercise.Exercise) -> Void {
         if !isOffline {
-            managedSession.startExplicitClassification(exerciseName)
-        }
-    }
-    
-    override func markExerciseExplicit(exercise: Exercise.Exercise, f: Result<Void> -> Void) -> Void {
-        if !isOffline {
-            managedSession.markExerciseExplicit(exercise, f: f)
+            managedSession.startExplicitClassification(exercise)
+        } else {
+            io.appendExplicitClassification(exercise)
         }
     }
     

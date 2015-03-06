@@ -6,7 +6,7 @@ import Foundation
 ///
 protocol LiveSessionClassificationTagDelegate {
     
-    func doneTagging(exercise: Exercise.Exercise, intensity: Exercise.ExerciseIntensityKey, repetition: Int)
+    func doneTagging(exercise: Exercise.Exercise, repetition: Int)
     
 }
 
@@ -106,7 +106,8 @@ class LiveSessionTagView : UIView {
     
     @IBAction
     func done(sender: UIButton) {
-        delegate?.doneTagging(exercise, intensity: selectedIntensity, repetition: selectedRepetition)
+        exercise.intensity = selectedIntensity
+        delegate?.doneTagging(exercise, repetition: selectedRepetition)
     }
     
 }
@@ -147,17 +148,10 @@ class LiveSessionClassificationController : UITableViewController, ExerciseSessi
     // MARK: ExerciseSessionSettable implementation
     func setExerciseSession(session: ExerciseSession) {
         self.session = session
-        self.session.getClassificationExamples { x in
-            let examples = x.cata(
-                { _ -> [Exercise.Exercise] in
-                    return ClassificationExamplesCache.sharedInstance.getExamplesFor(session.props)
-                }
-                , r: { (result: [Exercise.Exercise]) -> [Exercise.Exercise] in
-                    ClassificationExamplesCache.sharedInstance.addExamplesToCache(session.props, values: result)
-                    return result
-                })
+        self.session.getClassificationExamples { $0.getOrUnit { examples in
             self.classificationExamples = examples
             self.tableView.reloadData()
+        }
         }
     }
     
@@ -194,7 +188,7 @@ class LiveSessionClassificationController : UITableViewController, ExerciseSessi
         } else {
             if selectedIndexPath != nil { session.endExplicitClassification() }
             let exercise = classificationExamples[indexPath.row]
-            session.startExplicitClassification(exercise.name)
+            session.startExplicitClassification(exercise)
             selectedIndexPath = indexPath
             isTagging = true
             tagView.setExercise(exercise)
@@ -205,21 +199,14 @@ class LiveSessionClassificationController : UITableViewController, ExerciseSessi
     
     // MARK: LiveSessionClassificationTagDelegate code
     
-    private func sendClassification(actualExercise: Exercise.Exercise, count: Int) {
-        if count > 0 {
-            session.markExerciseExplicit(actualExercise) { _ in self.sendClassification(actualExercise, count: count - 1) }
-        } else {
-            session.endExplicitClassification()
+    func doneTagging(exercise: Exercise.Exercise, repetition: Int) {
+        for i in 0..<repetition {
+            session.startExplicitClassification(exercise)
         }
-    }
-    
-    func doneTagging(exercise: Exercise.Exercise, intensity: Exercise.ExerciseIntensityKey, repetition: Int) {
-        let actualExercise = Exercise.Exercise(name: exercise.name, intensity: intensity, metric: nil)
-        sendClassification(actualExercise, count: repetition)
+        session.endExplicitClassification()
         
         isTagging = false
         tagView.hidden = true
         tableView.reloadData()
     }
-    
 }

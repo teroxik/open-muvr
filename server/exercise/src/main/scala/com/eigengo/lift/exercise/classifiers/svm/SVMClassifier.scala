@@ -67,7 +67,7 @@ trait SVMClassifier {
    */
   def predict(svm: SVMModel, data: DenseMatrix[Double], rbf: (DenseVector[Double], DenseVector[Double], Double) => Double): SVMClassification = {
     val feature = discreteCosineTransform(data)
-    val featureVector = feature.t.toDenseVector // row-major transformation
+    val featureVector = feature.toDenseVector // row-major transformation
     val scaledFeature = svm.scaled.map {
       case scaling =>
         (featureVector :- scaling.center) :/ scaling.scale
