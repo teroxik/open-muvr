@@ -20,7 +20,7 @@ Vagrant.configure(2) do |config|
   #   - SBT
   #   - CVC4 (with Java JNI bindings)
   #
-  # NOTE: Debian packages (i.e. `cvc4` and `libcvc4bindings-java3`) in the directory `/vagrant/exercise/debs` are (currently)
+  # NOTE: Debian packages (i.e. `cvc4` and `libcvc4bindings-java3`) in the directory `/vagrant/debs` are (currently)
   # sourced from:
   #   deb http://cvc4.cs.nyu.edu/debian unstable/
   config.vm.provision "shell", inline: <<-SHELL
@@ -31,6 +31,6 @@ Vagrant.configure(2) do |config|
     sudo apt-get install -y git
     sudo apt-get install -y oracle-java8-installer
     sudo apt-get install -y --force-yes sbt libantlr3c-3.2-0
-    sudo dpkg -R -i /vagrant/exercise/debs
+    sudo dpkg -R -i /vagrant/debs
   SHELL
 end
