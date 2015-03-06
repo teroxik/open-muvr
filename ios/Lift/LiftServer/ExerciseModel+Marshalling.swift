@@ -118,8 +118,6 @@ extension Exercise.ExerciseSession {
 
 extension Exercise.SessionSuggestion {
     static func unmarshal(json: JSON) -> Exercise.SessionSuggestion {
-        println(json)
-        
         let date = simpleIsoDateFormatter.dateFromString(json["date"].stringValue)!
         let muscleGroupKeys = json["muscleGroupKeys"].arrayValue.map { $0.stringValue }
         let intensity = json["intensity"].doubleValue
