@@ -95,8 +95,8 @@ class HomeController : UIViewController, UITableViewDataSource,
     private var sessionSummaries: [Exercise.SessionSummary] = []
     private var sessionDates: [Exercise.SessionDate] = []
     private var sessionSuggestions: [Exercise.SessionSuggestion] = [
-        Exercise.SessionSuggestion(muscleGroupKeys: ["arms"], intendedIntensity: 0.6),
-        Exercise.SessionSuggestion(muscleGroupKeys: ["chest"], intendedIntensity: 0.8)
+        Exercise.SessionSuggestion(date: NSDate(), muscleGroupKeys: ["arms"], intendedIntensity: 0.6),
+        Exercise.SessionSuggestion(date: NSDate(), muscleGroupKeys: ["chest"], intendedIntensity: 0.8)
     ]
     private var offlineSessions: [OfflineExerciseSession] = []
     private let calendar = JTCalendar()
@@ -131,6 +131,7 @@ class HomeController : UIViewController, UITableViewDataSource,
         offlineSessions = ExerciseSessionManager.sharedInstance.listOfflineSessions()
         tableView.reloadData()
         replayOfflineSessions()
+        getSuggestions()
         AppDelegate.becomeCurrentRemoteNotificationDelegate(self)
         AppDelegate.becomeCurrentLiftServerDelegate(self)
     }
@@ -285,6 +286,15 @@ class HomeController : UIViewController, UITableViewDataSource,
         }
     }
     
+    func getSuggestions() {
+        LiftServer.sharedInstance.exerciseGetExerciseSuggestions(CurrentLiftUser.userId!) { $0.getOrUnit { x
+            in
+            self.sessionSuggestions = x
+            self.tableView.reloadData()
+            }
+        }
+    }
+    
     // MARK: JTCalendarDataSource
     
     func calendarHaveEvent(calendar: JTCalendar!, date: NSDate!) -> Bool {
@@ -298,7 +308,6 @@ class HomeController : UIViewController, UITableViewDataSource,
             }
         }
     }
-
     
     // MARK: UIActionSheetDelegate
     func actionSheet(actionSheet: UIActionSheet, clickedButtonAtIndex buttonIndex: Int) {

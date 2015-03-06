@@ -6,6 +6,11 @@ let isoDateFormatter: NSDateFormatter = {
     return dateFormatter
 }()
 
+let simpleIsoDateFormatter: NSDateFormatter = {
+    let dateFormatter = NSDateFormatter()
+    dateFormatter.dateFormat = "yyyy-MM-dd"
+    return dateFormatter
+}()
 
 extension Exercise.SessionSummary {
 
@@ -111,6 +116,18 @@ extension Exercise.ExerciseSession {
         return Exercise.ExerciseSession(sessionProps: sessionProps, sets: sets)
     }
     
+}
+
+extension Exercise.SessionSuggestion {
+    static func unmarshal(json: JSON) -> Exercise.SessionSuggestion {
+        println(json)
+        
+        let date = simpleIsoDateFormatter.dateFromString(json["date"].stringValue)!
+        let muscleGroupKeys = json["muscleGroupKeys"].arrayValue.map { $0.stringValue }
+        let intensity = json["intensity"].doubleValue
+        
+        return Exercise.SessionSuggestion(date: date, muscleGroupKeys: muscleGroupKeys, intendedIntensity: intensity)
+    }
 }
 
 extension Exercise.MuscleGroup {
