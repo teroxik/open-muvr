@@ -85,6 +85,11 @@ enum LiftServerURLs : LiftServerRequestConvertible {
     /// Retrieves all the exercises for the given ``userId`` and ``sessionId``
     ///
     case ExerciseGetExerciseSession(/*userId: */NSUUID, /*sessionId: */NSUUID)
+    
+    ///
+    /// Retrieves future exercise session suggestions for give ``userId``
+    ///
+    case ExerciseGetExerciseSuggestions(/*userId: */NSUUID)
 
     ///
     /// Deletes all the exercises for the given ``userId`` and ``sessionId``
@@ -188,6 +193,7 @@ enum LiftServerURLs : LiftServerRequestConvertible {
                 case .ExerciseGetClassificationExamples(let userId): return LiftServerRequest(path: "/exercise/\(userId.UUIDString)/classification", method: Method.GET)
                 case .ExplicitExerciseClassificationStart(let userId, let sessionId): return LiftServerRequest(path: "/exercise/\(userId.UUIDString)/\(sessionId.UUIDString)/classification", method: Method.POST)
                 case .ExplicitExerciseClassificationStop(let userId, let sessionId): return LiftServerRequest(path: "/exercise/\(userId.UUIDString)/\(sessionId.UUIDString)/classification", method: Method.DELETE)
+                case .ExerciseGetExerciseSuggestions(let userId): return LiftServerRequest(path: "/exercise/\(userId.UUIDString)/suggestions", method: Method.GET)
                 }
                 }()
             
