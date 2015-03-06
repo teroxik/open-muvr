@@ -405,6 +405,11 @@ class UserExercisesProcessor(notification: ActorRef, userProfile: ActorRef)
       case NoExercise(metadata) ⇒
         persist(NoExerciseEvt(id, metadata)) { evt ⇒ }
 
+      case ExerciseSetSuggestions(suggestions) ⇒
+        persist(ExerciseSuggestionsSetEvt(suggestions)) { evt ⇒
+          sender() ! \/.right(())
+        }
+
       case x ⇒
         log.warning(s"Unexpected $x in exercising")
         sender() ! \/.left(s"Unexpected in exercising $x")
