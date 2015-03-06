@@ -525,4 +525,12 @@ public class LiftServer {
         request(LiftServerURLs.ExerciseDeleteExerciseSession(userId, sessionId))
             .responseAsResult(asu(), f, const(()))
     }
+    
+    ///
+    /// Get suggested exercise sessions
+    ///
+    func exerciseGetExerciseSuggestions(userId: NSUUID, f: Result<[Exercise.SessionSuggestion]> -> Void) -> Void {
+        request(LiftServerURLs.ExerciseGetExerciseSuggestions(userId))
+            .responseAsResult(asu(), f) { json in return json.arrayValue.map(Exercise.SessionSuggestion.unmarshal) }
+    }
 }

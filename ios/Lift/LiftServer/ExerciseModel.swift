@@ -127,6 +127,8 @@ struct Exercise {
     /// Session suggestions
     ///
     struct SessionSuggestion {
+        /// the date associated with the suggestion
+        var date: NSDate
         /// the target muscle groups
         var muscleGroupKeys: [String]
         /// the intended intensity
