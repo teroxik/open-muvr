@@ -501,7 +501,7 @@ class SensorData {
         let endTime = startTime + duration(sampleSize, samplesPerSecond: samplesPerSecond)
         let endGap = until - endTime
         if endGap > 0 {
-            let length = Int( endGap * Double(samplesPerSecond) * Double(sampleSize) )
+            let length = Int(round(endGap * Double(samplesPerSecond))) * Int(sampleSize)
             appendGap(length, gapValue: gapValue, toData: samples)
         }
     }

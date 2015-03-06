@@ -55,9 +55,17 @@ void gfs_raw_accel_data_handler(AccelRawData *data, uint32_t num_samples, uint64
     // pack
     struct gfs_packed_accel_data *ad = (struct gfs_packed_accel_data *)(gfs_context.buffer + gfs_context.buffer_position);
     for (unsigned int i = 0; i < num_samples; ++i) {
+        
+#ifndef TEST__WITH_SINES
         ad[i].x_val = SIGNED_12_MAX(data[i].x);
         ad[i].y_val = SIGNED_12_MAX(data[i].y);
         ad[i].z_val = SIGNED_12_MAX(data[i].z);
+#else
+        ad[i].x_val = SIGNED_12_MAX( sin_lookup((timestamp * 300) % TRIG_MAX_ANGLE) >> 6 ); // SIGNED_12_MAX(data[i].x);
+        ad[i].y_val = SIGNED_12_MAX( sin_lookup((timestamp * 300) % TRIG_MAX_ANGLE) >> 6 ); // SIGNED_12_MAX(data[i].y);
+        ad[i].z_val = SIGNED_12_MAX( cos_lookup((timestamp * 300) % TRIG_MAX_ANGLE) >> 6 ); // SIGNED_12_MAX(data[i].z);
+#endif
+        
     }
     gfs_context.buffer_position += len;
 }
