@@ -46,14 +46,14 @@ docker <<= (docker dependsOn assembly)
 dockerfile in docker := {
   val artifact = (outputPath in assembly).value
   val artifactTargetPath = s"/app/${artifact.name}"
-  val debArtifactPath = s"${sourceDirectory.value}/../../debs"
   val debTargetPath = "/app/debs"
   new Dockerfile {
     from("dockerfile/java")
     val f = new File(s"${Path.userHome.absolutePath}/.ios")
     if (f.exists) add(f, "/root/.ios")
     add(artifact, artifactTargetPath)
-    add(debArtifactPath, debTargetPath)
+    val d = new File(s"${sourceDirectory.value}/../../debs")
+    if (d.exists) add(d, debTargetPath)
     run("apt-get", "update")
     // Install CVC4, JNI shared library/bindings - used by exercise classification models
     run("apt-get", "install", "-y", "--force-yes", "libantlr3c-3.2-0")
