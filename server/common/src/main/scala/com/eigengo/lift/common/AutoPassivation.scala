@@ -18,5 +18,4 @@ trait AutoPassivation extends ActorLogging {
   }
 
   protected def withPassivation(receive: Receive): Receive = receive.orElse(passivationReceive)
-
 }

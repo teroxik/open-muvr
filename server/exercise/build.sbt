@@ -21,6 +21,7 @@ libraryDependencies ++= Seq(
   spray.routing,
   // Json
   json4s.native,
+  json4s.jackson,
   // Codec
   scodec_bits,
   scalaz.core,

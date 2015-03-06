@@ -1,6 +1,5 @@
 package com.eigengo.lift.exercise
 
-import java.io.BufferedWriter
 import java.util.{Calendar, Date}
 
 import akka.actor.{ActorRef, ActorLogging, Props}

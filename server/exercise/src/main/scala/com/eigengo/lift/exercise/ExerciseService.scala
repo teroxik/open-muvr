@@ -106,6 +106,13 @@ trait ExerciseService extends Directives with ExerciseMarshallers {
             (userExercisesStatistics ? UserExerciseExplicitClassificationExamples(userId, None, mgks.map(_.split(",")))).mapRight[List[Exercise]]
           }
         }
+      }
+    } ~
+    path("exercise" / UserIdValue / "suggestions") {  userId ⇒
+      get {
+        complete {
+          (userExercisesStatistics ? UserGetExerciseSuggestions(userId)).mapTo[Suggestions]
+        }
       } ~
       post {
         handleWith { suggestions: Suggestions ⇒

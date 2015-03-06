@@ -1,94 +1,33 @@
 package com.eigengo.lift.exercise
 
-import com.eigengo.lift.Exercise.{SuggestionSource, Suggestion, Suggestions}
 import com.eigengo.lift.common.{CommonMarshallers, CommonPathDirectives}
-import java.text.SimpleDateFormat
-import org.json4s.JsonAST._
-import org.json4s.native.JsonParser
-import spray.http._
-import spray.httpx.marshalling.{BasicMarshallers, ToResponseMarshaller, ToResponseMarshallingContext}
+import spray.http.{HttpEntity, _}
+import spray.httpx.marshalling._
 import spray.httpx.unmarshalling._
-import spray.routing._
+import spray.routing.PathMatcher1
 import spray.routing.directives.{MarshallingDirectives, PathDirectives}
+
+import scala.language.implicitConversions
 
 /**
  * Defines the marshallers for the Lift system
  */
-trait ExerciseMarshallers extends MarshallingDirectives with PathDirectives with CommonPathDirectives with CommonMarshallers {
-  
+trait ExerciseMarshallers
+  extends MarshallingDirectives
+  with PathDirectives
+  with CommonPathDirectives
+  with CommonMarshallers
+  with SuggestionsMarshallers{
+
   implicit object MultiPacketFromRequestUnmarshaller extends FromRequestUnmarshaller[MultiPacket] {
     override def apply(request: HttpRequest): Deserialized[MultiPacket] = {
       MultiPacketDecoder.decode(request.entity.data.toByteString.asByteBuffer).fold(x ⇒ Left(MalformedContent(x)), Right.apply)
     }
   }
 
-  implicit object SuggestionsFromRequestUnmarshaller extends FromRequestUnmarshaller[Suggestions] {
-    private val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
-
-    private def suggestion(value: JValue): Suggestion = (value: @unchecked) match {
-      /*
-         { "date":"2015-02-20",
-           "source":"history",
-           "musgleGroupKeys": ["arms"],
-           "intensity": 1.0
-         } ||
-         { "date":"2015-02-21",
-           "source":"programme"
-         } ||
-         { "date":"2015-02-22",
-           "source": { "notes":"Chop, chop" },
-           "muscleGroupKeys": ["legs"],
-           "intensity":0.8
-         }
-       */
-      case JObject(obj) ⇒
-        val fields = obj.toMap
-        val JString(ds) = fields("date")
-        val date = dateFormat.parse(ds)
-        val source = (fields("source"): @unchecked) match {
-          case JString("history") ⇒
-            SuggestionSource.History
-          case JString("programme") ⇒
-            SuggestionSource.Programme
-          case JObject(trainer) ⇒
-            val notes = trainer.toMap.get("notes").flatMap {
-              case JString(x) ⇒
-                Some(x)
-              case _ =>
-                None
-            }.getOrElse("")
-            SuggestionSource.Trainer(notes)
-        }
-
-        (fields.get("muscleGroupKeys"), fields.get("intensity")) match {
-          case (Some(JArray(mgks)), Some(JDouble(intensity))) ⇒
-            Suggestion.Session(date, source, mgks.flatMap {
-              case JString(x) ⇒
-                Some(x)
-              case _ =>
-                None
-            }, intensity)
-          case _ ⇒
-            Suggestion.Rest(date, source)
-        }
-    }
-
-    override def apply(request: HttpRequest): Deserialized[Suggestions] = {
-      val json = JsonParser.parse(request.entity.asString, false)
-      json match {
-        case JArray(suggestions) ⇒
-          Right(Suggestions(suggestions.map(suggestion)))
-        case _ ⇒
-          Left(MalformedContent(":("))
-      }
-    }
-  }
-
-
   implicit object UnitToResponseMarshaller extends ToResponseMarshaller[Unit] {
     override def apply(value: Unit, ctx: ToResponseMarshallingContext): Unit = ctx.marshalTo(HttpResponse(entity = HttpEntity("{}")))
   }
 
   val SessionIdValue: PathMatcher1[SessionId] = JavaUUID.map(SessionId.apply)
-
 }

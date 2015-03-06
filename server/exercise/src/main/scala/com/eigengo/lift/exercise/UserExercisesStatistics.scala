@@ -1,11 +1,11 @@
 package com.eigengo.lift.exercise
 
-import akka.actor.Props
+import akka.actor.{ActorLogging, Props}
 import akka.contrib.pattern.ShardRegion
 import akka.persistence.PersistentView
 import com.eigengo.lift.Exercise._
 import com.eigengo.lift.common.UserId
-import com.eigengo.lift.exercise.UserExercises.{SessionEndedEvt, SessionStartedEvt, ExerciseEvt}
+import com.eigengo.lift.exercise.UserExercises.{ExerciseSuggestionsSetEvt, SessionEndedEvt, SessionStartedEvt, ExerciseEvt}
 import com.eigengo.lift.exercise.UserExercisesStatistics.ExerciseStatistics.Entry
 
 import scala.language.postfixOps
@@ -180,10 +180,21 @@ object UserExercisesStatistics {
   private case class ExerciseExplicitClassificationExamples(sessionId: Option[SessionId], muscleGroupKeys: Option[Seq[MuscleGroupKey]])
 
   /**
+   * Query to provide suggestions for future exercise sessions
+   */
+  private case object GetExerciseSuggestions
+
+  /**
+   * Query to provide suggestions for future exercise sessions
+   */
+  case class UserGetExerciseSuggestions(userId: UserId)
+
+  /**
    * The id extractor
    */
   val idExtractor: ShardRegion.IdExtractor = {
     case UserExerciseExplicitClassificationExamples(userId, s, m) ⇒ (userId.toString, ExerciseExplicitClassificationExamples(s, m))
+    case UserGetExerciseSuggestions(userId)                       ⇒ (userId.toString, GetExerciseSuggestions)
   }
 
   /**
@@ -191,15 +202,22 @@ object UserExercisesStatistics {
    */
   val shardResolver: ShardRegion.ShardResolver = {
     case UserExerciseExplicitClassificationExamples(userId, _, _) ⇒ s"${userId.hashCode() % 10}"
+    case UserGetExerciseSuggestions(userId)                       ⇒ s"${userId.hashCode() % 10}"
   }
 
 }
 
-class UserExercisesStatistics extends PersistentView {
+class UserExercisesStatistics
+  extends PersistentView
+  with ActorLogging {
+
   import scala.concurrent.duration._
   import UserExercisesStatistics._
+
+  //Internal state
   private val userId = UserId(self.path.name)
   private var exerciseStatistics: ExerciseStatistics = ExerciseStatistics.empty
+  private var suggestions = Suggestions.empty
 
   // we'll hang around for 360 seconds, just like the exercise sessions
   context.setReceiveTimeout(360.seconds)
@@ -213,21 +231,30 @@ class UserExercisesStatistics extends PersistentView {
   lazy val queries: Receive = {
     case ExerciseExplicitClassificationExamples(None, None)       ⇒ sender() ! \/.right(exerciseStatistics.examples())
     case ExerciseExplicitClassificationExamples(None, Some(mgks)) ⇒ sender() ! \/.right(exerciseStatistics.examples(mgks))
-
     case ExerciseExplicitClassificationExamples(_, _)             ⇒ sender() ! \/.left("No examples")
+    case GetExerciseSuggestions                                   ⇒ sender() ! suggestions
   }
 
   lazy val notExercising: Receive = {
     case SessionStartedEvt(sessionId, sessionProperties) if isPersistent ⇒
       context.become(exercising(sessionId, sessionProperties).orElse(queries))
+
+    case ExerciseSuggestionsSetEvt(suggest) if isPersistent              ⇒
+      suggestions = suggest
   }
 
   private def exercising(sessionId: SessionId, sessionProperties: SessionProperties): Receive = {
-    case ExerciseExplicitClassificationExamples(Some(`sessionId`), _) ⇒
+    case ExerciseExplicitClassificationExamples(Some(`sessionId`), _)    ⇒
       sender() ! \/.right(exerciseStatistics.examples(sessionProperties.muscleGroupKeys, sessionProperties.intendedIntensity))
-    case ExerciseEvt(_, metadata, exercise) if isPersistent ⇒
+
+    case ExerciseEvt(_, metadata, exercise) if isPersistent              ⇒
       exerciseStatistics = exerciseStatistics.withNewExercise(sessionProperties, exercise)
-    case SessionEndedEvt(_) if isPersistent ⇒ context.become(notExercising.orElse(queries))
+
+    case SessionEndedEvt(_) if isPersistent                              ⇒
+      context.become(notExercising.orElse(queries))
+
+    case ExerciseSuggestionsSetEvt(suggest) if isPersistent              ⇒
+      suggestions = suggest
   }
 
   override def receive: Receive = notExercising.orElse(queries)

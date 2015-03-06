@@ -3,6 +3,7 @@ package com.eigengo.lift
 import java.util.Date
 
 object Exercise {
+
   /** The exercise */
   @SerialVersionUID(1112l) type ExerciseName = String
   /** The exercise intensity 0..1 */
@@ -139,6 +140,13 @@ object Exercise {
      * @param source the source
      */
     case class Rest(date: Date, source: SuggestionSource) extends Suggestion
+  }
+
+  /**
+   * Companion object for suggestions providing initialization of default state
+   */
+  object Suggestions {
+    val empty: Suggestions = Suggestions(List.empty)
   }
 
   /**
