@@ -12,13 +12,13 @@ class SensorDataGroupTests : XCTestCase {
         sdg.decodeAndAdd(TestSensorData.phoneData, fromDeviceId: TestSensorData.phone, at: 1)
         sdg.decodeAndAdd(TestSensorData.phoneData, fromDeviceId: TestSensorData.phone, at: 2)     // we're within our gap of 0.1 ~> inline merges
 
-        let csdas12 = sdg.continuousSensorDataArrays(within: TimeRange(start: 1, end: 2), maximumGap: 0, gapValue: 0)
+        let csdas12 = sdg.continuousSensorDataArrays(within: TimeRange(start: 1, end: 2), maximumGap: 0, gapValue: dash)
         XCTAssertEqual(csdas12.find { $0.header.type == 0 }!.sensorData.asString(), "AB")
         XCTAssertEqual(csdas12.find { $0.header.type == 1 }!.sensorData.asString(), "12")
         XCTAssertEqual(csdas12.find { $0.header.type == 2 }!.sensorData.asString(), "abac")
         
         
-        let csdas13 = sdg.continuousSensorDataArrays(within: TimeRange(start: 1, end: 3), maximumGap: 0, gapValue: 0)
+        let csdas13 = sdg.continuousSensorDataArrays(within: TimeRange(start: 1, end: 3), maximumGap: 0, gapValue: dash)
         XCTAssertEqual(csdas13.find { $0.header.type == 0 }!.sensorData.asString(), "ABAB")
         XCTAssertEqual(csdas13.find { $0.header.type == 1 }!.sensorData.asString(), "1212")
         XCTAssertEqual(csdas13.find { $0.header.type == 2 }!.sensorData.asString(), "abacabac")
@@ -93,13 +93,13 @@ class SensorDataGroupTests : XCTestCase {
         XCTAssertEqual(two.find { $0.header.type == 0 && $0.header.sourceDeviceId == TestSensorData.phone }!.sensorData.asString(),  "BA")
         XCTAssertEqual(two.find { $0.header.type == 1 && $0.header.sourceDeviceId == TestSensorData.phone }!.sensorData.asString(),  "21")
         XCTAssertEqual(two.find { $0.header.type == 2 && $0.header.sourceDeviceId == TestSensorData.phone }!.sensorData.asString(),  "acab")
-        XCTAssertEqual(two.find { $0.header.type == 0 && $0.header.sourceDeviceId == TestSensorData.pebble }!.sensorData.asString(), "#$")
+        XCTAssertEqual(two.find { $0.header.type == 0 && $0.header.sourceDeviceId == TestSensorData.pebble }!.sensorData.asString(), "-#")
         
         // 3.5 - 4.5
         XCTAssertEqual(three.find { $0.header.type == 0 && $0.header.sourceDeviceId == TestSensorData.phone }!.sensorData.asString(), "BA")
         XCTAssertEqual(three.find { $0.header.type == 1 && $0.header.sourceDeviceId == TestSensorData.phone }!.sensorData.asString(), "21")
         XCTAssertEqual(three.find { $0.header.type == 2 && $0.header.sourceDeviceId == TestSensorData.phone }!.sensorData.asString(), "acab")
-        XCTAssertTrue(three.find { $0.header.type == 0 && $0.header.sourceDeviceId == TestSensorData.pebble } == nil)
+        XCTAssertEqual(three.find { $0.header.type == 0 && $0.header.sourceDeviceId == TestSensorData.pebble }!.sensorData.asString(), "$-")
         
         // 4.5 - 5.5
         XCTAssertEqual(four.find { $0.header.type == 0 && $0.header.sourceDeviceId == TestSensorData.phone }!.sensorData.asString(),  "BA")
