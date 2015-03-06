@@ -19,15 +19,19 @@ Vagrant.configure(2) do |config|
   #   - JDK 8
   #   - SBT
   #   - CVC4 (with Java JNI bindings)
+  #
+  # NOTE: Debian packages (i.e. `cvc4` and `libcvc4bindings-java3`) in the directory `/vagrant/exercise/debs` are sourced
+  # from:
+  #   deb http://cvc4.cs.nyu.edu/debian unstable/
   config.vm.provision "shell", inline: <<-SHELL
     echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | sudo /usr/bin/debconf-set-selections
     sudo add-apt-repository -y ppa:webupd8team/java
     echo "deb http://dl.bintray.com/sbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt.list
-    echo "deb http://cvc4.cs.nyu.edu/debian unstable/" | sudo tee /etc/apt/sources.list.d/cvc4.list
     sudo apt-get -y update
     sudo apt-get install -y git
     sudo apt-get install -y oracle-java8-installer
     sudo apt-get install -y --force-yes sbt
-    sudo apt-get install -y --force-yes cvc4 libcvc4bindings-java3
+    sudo dpkg -R --force-depends -i /vagrant/exercise/debs
+    sudo apt-get -f install -y --force-yes
   SHELL
 end
