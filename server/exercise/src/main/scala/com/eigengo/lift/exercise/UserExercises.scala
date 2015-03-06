@@ -69,8 +69,9 @@ object UserExercises {
   /**
    * Manual classification started event.
    * @param sessionId the session id
+   * @param exercise the exercise
    */
-  case class ExerciseStartClassificationEvt(sessionId: SessionId, exerciseName: ExerciseName)
+  case class ExerciseStartClassificationEvt(sessionId: SessionId, exercise: Exercise)
 
   /**
    * Exercise event received for the given session with model metadata and exercise

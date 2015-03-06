@@ -2,7 +2,7 @@ package com.eigengo.lift.exercise
 
 import java.util.{Date, UUID}
 
-import com.eigengo.lift.Exercise.{RequestedClassification, ExerciseIntensity, MuscleGroupKey}
+import com.eigengo.lift.Exercise.{ExerciseIntensity, MuscleGroupKey}
 
 /**
  * The session identity
@@ -22,11 +22,9 @@ import com.eigengo.lift.Exercise.{RequestedClassification, ExerciseIntensity, Mu
  * @param muscleGroupKeys the planned muscle groups
  * @param intendedIntensity the planned intensity
  */
-@SerialVersionUID(1022l) case class SessionProperties(
-    startDate: Date,
-    muscleGroupKeys: Seq[MuscleGroupKey],
-    intendedIntensity: ExerciseIntensity,
-    classification: RequestedClassification) {
+@SerialVersionUID(1022l) case class SessionProperties(startDate: Date,
+                   muscleGroupKeys: Seq[MuscleGroupKey],
+                   intendedIntensity: ExerciseIntensity) {
   require(intendedIntensity >  0.0, "intendedIntensity must be between <0, 1)")
   require(intendedIntensity <= 1.0, "intendedIntensity must be between <0, 1)")
 

@@ -8,13 +8,13 @@ import spray.routing.Route
 
 import scala.concurrent.ExecutionContext
 
-case class ExerciseBoot(userExercises: ActorRef, userExercisesView: ActorRef, userExercisesSuggestions: ActorRef) extends BootedNode {
+case class ExerciseBoot(userExercises: ActorRef, userExercisesSessions: ActorRef, userExercisesStatistics: ActorRef) extends BootedNode {
   /**
    * Starts the route given the exercise boot
    * @param ec the execution context
    * @return the route
    */
-  def route(ec: ExecutionContext): Route = exerciseRoute(userExercises, userExercisesView, userExercisesSuggestions)(ec)
+  def route(ec: ExecutionContext): Route = exerciseRoute(userExercises, userExercisesSessions, userExercisesStatistics)(ec)
 
   override def api: Option[(ExecutionContext) ⇒ Route] = Some(route)
 }
@@ -34,18 +34,18 @@ object ExerciseBoot extends ExerciseService {
       entryProps = Some(UserExercisesProcessor.props(notification, profile)),
       idExtractor = UserExercisesProcessor.idExtractor,
       shardResolver = UserExercisesProcessor.shardResolver)
-    val userExerciseView = ClusterSharding(system).start(
+    val userExercisesSessions = ClusterSharding(system).start(
       typeName = UserExercisesSessions.shardName,
       entryProps = Some(UserExercisesSessions.props(notification, profile)),
       idExtractor = UserExercisesSessions.idExtractor,
       shardResolver = UserExercisesSessions.shardResolver)
-    val userExercisesSuggestions = ClusterSharding(system).start(
-      typeName = UserExerciseSuggestions.shardName,
-      entryProps = Some(UserExerciseSuggestions.props()),
-      idExtractor = UserExerciseSuggestions.idExtractor,
-      shardResolver = UserExerciseSuggestions.shardResolver)
+    val userExercisesStatistics = ClusterSharding(system).start(
+      typeName = UserExercisesStatistics.shardName,
+      entryProps = Some(UserExercisesStatistics.props),
+      idExtractor = UserExercisesStatistics.idExtractor,
+      shardResolver = UserExercisesStatistics.shardResolver)
 
-    ExerciseBoot(userExercise, userExerciseView, userExercisesSuggestions)
+    ExerciseBoot(userExercise, userExercisesSessions, userExercisesStatistics)
   }
 
 }

@@ -4,7 +4,7 @@ import Keys._
 object Dependencies {
 
   object akka {
-    val version = "2.3.8"
+    val version = "2.3.9"
     // Core Akka
     val actor                 = "com.typesafe.akka"      %% "akka-actor"                    % version
     val cluster               = "com.typesafe.akka"      %% "akka-cluster"                  % version
@@ -41,7 +41,7 @@ object Dependencies {
   }
 
   object scalaz {
-    val core = "org.scalaz" %% "scalaz-core" % "7.1.0"
+    val core = "org.scalaz" %% "scalaz-core" % "7.1.1"
   }
 
   object json4s {
@@ -121,7 +121,7 @@ object Dependencies {
   val scodec_bits      = "org.typelevel"          %% "scodec-bits"  % "1.0.4"
   val parboiled        = "org.parboiled"          %% "parboiled"    % "2.0.1"
 
-  val async            = "org.scala-lang.modules" %% "scala-async"  % "0.9.2"
+  val async            = "org.scala-lang.modules" %% "scala-async"  % "0.9.3"
 
   // Scala reflect
   val scala_reflect    = "org.scala-lang"         % "scala-reflect" % "2.10.4"

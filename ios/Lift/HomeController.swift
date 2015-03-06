@@ -167,8 +167,7 @@ class HomeController : UIViewController, UITableViewDataSource,
         switch indexPath.section {
         case 0:
             let sessionSuggestion = sessionSuggestions[tableView.indexPathForSelectedRow()!.row]
-            let props = Exercise.SessionProps(startDate: NSDate(), muscleGroupKeys: sessionSuggestion.muscleGroupKeys, intendedIntensity: sessionSuggestion.intendedIntensity,
-                classification: .ExplicitClassification)
+            let props = Exercise.SessionProps(startDate: NSDate(), muscleGroupKeys: sessionSuggestion.muscleGroupKeys, intendedIntensity: sessionSuggestion.intendedIntensity)
             
             LiftServer.sharedInstance.exerciseSessionStart(CurrentLiftUser.userId!, props: props) { x in
                 let (isOfflineFromStart, session) = x.fold(

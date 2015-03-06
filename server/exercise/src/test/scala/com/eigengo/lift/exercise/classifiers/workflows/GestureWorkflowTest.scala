@@ -58,7 +58,7 @@ class GestureWorkflowTest extends AkkaSpec(ConfigFactory.load("classification.co
 
     "in messages should pass through unaltered and tap is detected [tap request]" in {
       val msgs = tapEvents
-      val gestureWindow = List(256 until 290, 341 until 344, 379 until 408, 546 until 576).flatten.toList
+      val gestureWindow = List(380 until 382, 383 until 389, 390 until 393, 394 until 401, 402 until 404, 549 until 556, 557 until 559, 561 until 570).flatten.toList
       val inProbe = PublisherProbe[AccelerometerValue]()
       val outProbe = SubscriberProbe[Option[Fact]]()
 

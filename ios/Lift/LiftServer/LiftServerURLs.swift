@@ -127,6 +127,11 @@ enum LiftServerURLs : LiftServerRequestConvertible {
     case ExerciseSessionGetClassificationExamples(/*userId: */NSUUID, /*sessionId: */NSUUID)
     
     ///
+    /// Gets exercise classification examples for the given ``userId``
+    ///
+    case ExerciseGetClassificationExamples(/*userId: */NSUUID)
+    
+    ///
     /// Ends the session for the given ``userId`` and ``sessionId``
     ///
     case ExerciseSessionEnd(/*userId: */NSUUID, /*sessionId: */NSUUID)
@@ -135,12 +140,7 @@ enum LiftServerURLs : LiftServerRequestConvertible {
     /// Starts the explicit exercise classification for ``userId`` and ``sessionId``
     ///
     case ExplicitExerciseClassificationStart(/*userId: */NSUUID, /*sessionId: */NSUUID)
-    
-    ///
-    /// Mark an explicit exercise for ``userId`` and ``sessionId``
-    ///
-    case ExplicitExerciseClassificationMark(/*userId: */NSUUID, /*sessionId: */NSUUID)
-    
+        
     ///
     /// Stops the explicit exercise classification for ``userId`` and ``sessionId``
     ///
@@ -190,8 +190,8 @@ enum LiftServerURLs : LiftServerRequestConvertible {
                 case .ExerciseSessionReplayData(let userId, let sessionId): return LiftServerRequest(path: "/exercise/\(userId.UUIDString)/\(sessionId.UUIDString)/replay", method: Method.PUT)
                     
                 case .ExerciseSessionGetClassificationExamples(let userId, let sessionId): return LiftServerRequest(path: "/exercise/\(userId.UUIDString)/\(sessionId.UUIDString)/classification", method: Method.GET)
+                case .ExerciseGetClassificationExamples(let userId): return LiftServerRequest(path: "/exercise/\(userId.UUIDString)/classification", method: Method.GET)
                 case .ExplicitExerciseClassificationStart(let userId, let sessionId): return LiftServerRequest(path: "/exercise/\(userId.UUIDString)/\(sessionId.UUIDString)/classification", method: Method.POST)
-                case .ExplicitExerciseClassificationMark(let userId, let sessionId): return LiftServerRequest(path: "/exercise/\(userId.UUIDString)/\(sessionId.UUIDString)/classification", method: Method.PUT)
                 case .ExplicitExerciseClassificationStop(let userId, let sessionId): return LiftServerRequest(path: "/exercise/\(userId.UUIDString)/\(sessionId.UUIDString)/classification", method: Method.DELETE)
                 case .ExerciseGetExerciseSuggestions(let userId): return LiftServerRequest(path: "/exercise/\(userId.UUIDString)/suggestions", method: Method.GET)
                 }

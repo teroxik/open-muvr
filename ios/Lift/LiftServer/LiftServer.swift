@@ -290,7 +290,9 @@ public class LiftServer {
     private func request(req: LiftServerRequestConvertible, body: Body? = nil) -> Request {
         let lsr = req.Request
         switch body {
-        case let .Some(Body.Json(params)): return manager.request(lsr.method, baseUrlString + lsr.path, parameters: params, encoding: ParameterEncoding.JSON)
+        case let .Some(Body.Json(params)):
+            let encoding = lsr.method == .GET ? ParameterEncoding.URL : ParameterEncoding.JSON
+            return manager.request(lsr.method, baseUrlString + lsr.path, parameters: params, encoding: encoding)
         case let .Some(Body.Data(data)): return manager.upload(URLRequest(lsr.method, baseUrlString + lsr.path), data: data)
         case .None: return manager.request(lsr.method, baseUrlString + lsr.path, parameters: nil, encoding: ParameterEncoding.URL)
         }
@@ -417,27 +419,40 @@ public class LiftServer {
             .responseAsResult(asu(), f, const(()))
     }
     
+    ///
+    /// Get the classification examples for the given ``userId`` and ``sessionId``
+    ///
     func exerciseSessionGetClassificationExamples(userId: NSUUID, sessionId: NSUUID, f: Result<[Exercise.Exercise]> -> Void) -> Void {
         request(LiftServerURLs.ExerciseSessionGetClassificationExamples(userId, sessionId))
             .responseAsResult(asu(), f) { json in json.arrayValue.map(Exercise.Exercise.unmarshal) }
     }
+    
+    ///
+    /// Get the classification examples for the given ``userId`` and ``muscleGroupKeys``
+    ///
+    func exerciseGetClassificationExamples(userId: NSUUID, muscleGroupKeys: [Exercise.MuscleGroupKey], f: Result<[Exercise.Exercise]> -> Void) -> Void {
+        request(LiftServerURLs.ExerciseGetClassificationExamples(userId), body: .Json(params: ["muscleGroupKeys":",".join(muscleGroupKeys)]))
+            .responseAsResult(asu(), f) { json in json.arrayValue.map(Exercise.Exercise.unmarshal) }
+        
+    }
+    
+    ///
+    /// Get the classification examples for the given ``userId``
+    ///
+    func exerciseGetClassificationExamples(userId: NSUUID, f: Result<[Exercise.Exercise]> -> Void) -> Void {
+        request(LiftServerURLs.ExerciseGetClassificationExamples(userId))
+            .responseAsResult(asu(), f) { json in json.arrayValue.map(Exercise.Exercise.unmarshal) }
+    }
+
 
     ///
     /// Submit an explicit exercise start to the server
     ///
-    func exerciseSessionStartExplicitClassification(userId: NSUUID, sessionId: NSUUID, exerciseName: String, f: Result<Void> -> Void) -> Void {
-        request(LiftServerURLs.ExplicitExerciseClassificationStart(userId, sessionId))
+    func exerciseSessionStartExplicitClassification(userId: NSUUID, sessionId: NSUUID, exercise: Exercise.Exercise, f: Result<Void> -> Void) -> Void {
+        request(LiftServerURLs.ExplicitExerciseClassificationStart(userId, sessionId), body: .Json(params: exercise.marshal()))
             .responseAsResult(asu(), f, const(()))
     }
-    
-    ///
-    /// Submit data for a marked exerise to the server
-    ///
-    func exerciseSessionMarkExplicitClassification(userId: NSUUID, sessionId: NSUUID, exercise: Exercise.Exercise, f: Result<Void> -> Void) -> Void {
-        request(LiftServerURLs.ExplicitExerciseClassificationMark(userId, sessionId), body: .Json(params: exercise.marshal()))
-            .responseAsResult(asu(), f, const(()))
-    }
-        
+            
     ///
     /// Finish saving data for the explicit exercise
     ///
