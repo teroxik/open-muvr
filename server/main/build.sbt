@@ -56,6 +56,10 @@ dockerfile in docker := {
     if (d.exists) add(d, debTargetPath)
     run("apt-get", "update")
     // Install CVC4, JNI shared library/bindings - used by exercise classification models
+    //
+    // NOTE: Debian packages (i.e. `cvc4` and `libcvc4bindings-java3`) in the `debs` directory are (currently)
+    // sourced from:
+    //   deb http://cvc4.cs.nyu.edu/debian unstable/
     run("apt-get", "install", "-y", "--force-yes", "libantlr3c-3.2-0")
     run("dpkg", "-R", "-i", debTargetPath)
     entryPoint("java", "-jar", artifactTargetPath)
