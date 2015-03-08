@@ -4,7 +4,7 @@ import Keys._
 object Dependencies {
 
   object akka {
-    val version = "2.3.8"
+    val version = "2.3.9"
     // Core Akka
     val actor                 = "com.typesafe.akka"      %% "akka-actor"                    % version
     val cluster               = "com.typesafe.akka"      %% "akka-cluster"                  % version
@@ -13,7 +13,7 @@ object Dependencies {
     val persistence_cassandra = "com.github.krasserm"    %% "akka-persistence-cassandra"    % "0.3.4" intransitive()
 
     object streams {
-      val version = "1.0-M3"
+      val version = "1.0-M4"
 
       val core      = "com.typesafe.akka" %% "akka-stream-experimental"         % version
       val http      = "com.typesafe.akka" %% "akka-http-experimental"           % version
@@ -36,11 +36,12 @@ object Dependencies {
     val routing = "io.spray" %% "spray-routing-shapeless2" % version
     val client  = "io.spray" %% "spray-client"             % version
 
-    val testkit = "io.spray" %% "spray-testkit"            % version
+    val testkit = ("io.spray" %% "spray-testkit"            % version)
+      .exclude("org.scalamacros", "quasiquotes_2.10.3")
   }
 
   object scalaz {
-    val core = "org.scalaz" %% "scalaz-core" % "7.1.0"
+    val core = "org.scalaz" %% "scalaz-core" % "7.1.1"
   }
 
   object json4s {
@@ -53,7 +54,19 @@ object Dependencies {
 
     val breeze  = "org.scalanlp" %% "breeze"         % version
     val natives = "org.scalanlp" %% "breeze-natives" % version
-    val nak     = "org.scalanlp" %% "nak"            % "1.3" exclude("org.scalanlp", "breeze_2.11") exclude("org.scalanlp", "breeze-natives_2.11")
+    val nak     = "org.scalanlp" %% "nak"            % "1.3" exclude("org.scalanlp", "breeze_2.10") exclude("org.scalanlp", "breeze-natives_2.10")
+  }
+
+  //TODO: Spark, Hadoop, Akkaanalytics are exclusive for currently used spark build and should be separated from the rest
+  object hadoop {
+    val version = "2.4.0"
+
+    val client = ("org.apache.hadoop" % "hadoop-client" % version)
+      .exclude("commons-beanutils", "commons-beanutils")
+      .exclude("commons-beanutils", "commons-beanutils-core")
+      .exclude("commons-logging", "commons-logging")
+      .exclude("org.slf4j", "slf4j-simple")
+      .exclude("org.slf4j", "slf4j-log4j12")
   }
 
   object spark {
@@ -65,6 +78,7 @@ object Dependencies {
       .exclude("org.eclipse.jetty.orbit", "javax.mail")
       .exclude("org.eclipse.jetty.orbit", "javax.mail.glassfish")
       .exclude("org.eclipse.jetty.orbit", "javax.activation")
+      .exclude("commons-beanutils", "commons-beanutils")
       .exclude("commons-beanutils", "commons-beanutils-core")
       .exclude("commons-collections", "commons-collections")
       .exclude("commons-logging", "commons-logging")
@@ -76,6 +90,7 @@ object Dependencies {
     val streaming = "org.apache.spark" %% "spark-streaming" % version
     val streamingKafka = ("org.apache.spark" %% "spark-streaming-kafka" % version)
       .exclude("commons-beanutils", "commons-beanutils")
+      .exclude("commons-beanutils", "commons-beanutils-core")
       .exclude("commons-collections", "commons-collections")
       .exclude("com.esotericsoftware.minlog", "minlog")
   }
@@ -94,19 +109,25 @@ object Dependencies {
       .exclude("commons-logging", "commons-logging")
   }
 
+  object slf4j {
+    val version = "1.6.1"
+
+    val slf4j_simple     = "org.slf4j"              % "slf4j-simple" % version
+    val slf4j_api        = "org.slf4j"              % "slf4j-api"    % version
+  }
+
   val typesafeConfig   = "com.typesafe"           % "config"        % "1.2.1"
 
   val scodec_bits      = "org.typelevel"          %% "scodec-bits"  % "1.0.4"
   val parboiled        = "org.parboiled"          %% "parboiled"    % "2.0.1"
 
-  val async            = "org.scala-lang.modules" %% "scala-async"  % "0.9.2"
+  val async            = "org.scala-lang.modules" %% "scala-async"  % "0.9.3"
 
   // Scala reflect
-  val scala_reflect    = "org.scala-lang"         % "scala-reflect" % "2.11.4"
+  val scala_reflect    = "org.scala-lang"         % "scala-reflect" % "2.10.4"
 
   // Apple push notifications
   val apns             = "com.notnoop.apns"       % "apns"         % "0.1.6"
-  val slf4j_simple     = "org.slf4j"              % "slf4j-simple" % "1.6.1"
  
   // Datastax Cassandra Client
   val cassandra_driver = "com.datastax.cassandra" % "cassandra-driver-core" % "2.1.1" exclude("io.netty", "netty")

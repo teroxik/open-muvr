@@ -5,7 +5,35 @@ library(grid)
 library(gridExtra)
 library(pracma)
 
+source("enrichData.R")
+
 debug = FALSE
+
+# Enriches data with various features.
+#
+# @param data       data frame that is to be enriched
+# @param windowSize the size of the sliding window
+enrichDataWithFeatures = function(data, windowSize) {
+  data %|>%
+
+  enrichData(1, "svm", signalVectorMagnitude) %|>%
+  enrichData(1, "x.filtered", signalVectorMagnitudeFilter(1)) %|>%
+  enrichData(1, "y.filtered", signalVectorMagnitudeFilter(2)) %|>%
+  enrichData(1, "z.filtered", signalVectorMagnitudeFilter(3)) %|>%
+
+  enrichData(windowSize, "mean", movingAverage, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "ssd", simpleStandardDeviation, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "psd", populationStandardDeviation, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "iqr", interquartileRange(), "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "mad", meanAbsoluteDeviation, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "skew", overallSkewness, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "kurt", overallKurtosis, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "q1", overallQuartile(1), "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "q2", overallQuartile(2), "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "q3", overallQuartile(3), "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "sva", signalVectorArea, "x.filtered", "y.filtered", "z.filtered") %|>%
+  enrichData(windowSize, "ent", overallEntropy, "x.filtered", "y.filtered", "z.filtered")
+}
 
 ########################################################################################################################
 #
@@ -84,7 +112,7 @@ extractFeatures = function(inputList, size, tag, inc = 10) {
   zLabels = lapply(rep(1:size), function(index) { paste("z", index, sep="") })
   result = NULL
   for (input in inputList) {
-    csv = read.csv(file=input, col.names=c("x", "y", "z"))
+    csv = read.csv(file=input, col.names=c("x", "y", "z"), header=FALSE)
     for (window in windowSampling(csv, size, inc)) {
       startIndex = as.integer(window[1])
       endIndex = as.integer(window[2])
@@ -99,6 +127,65 @@ extractFeatures = function(inputList, size, tag, inc = 10) {
     }
   }
   write.table(result, file=paste("svm", "-", tag, "-features", ".csv", sep=""), sep=",", row.names=FALSE, col.names=FALSE)
+}
+
+# Function used to build and create file containing example feature vectors. Each row of the CSV data file represents a
+# (user) labeled sample window encoded as a feature vector (optionally processed using DCT). Here, indexes are compared 
+# against information in a tagging file and, if a match occurs, then the current window is tagged.
+#
+# Example R session:
+#
+# > library(dygraphs)
+# > data = read.csv(file="FILENAME.csv", header=TRUE)
+# > dygraph(ts(subset(data, location == "wrist.0")["x"]))
+# >
+# > ## Now we may manually generate start/end indexes for INDEX.csv
+# >
+# > extractFeaturesWithTagFile("FILENAME.csv", "INDEX.csv", 25, "TAG")
+# >
+# > ## Now we train our SVM
+# > 
+# > trainSVM("TAG")
+# >
+# > ## Current directory should now contain a trained SVM!
+#
+# @param input    CSV file name holding subset of multipacket data
+# @param tagInput CSV file name holding start and end indexes for data that is to be tagged
+# @param size     size of sampling window (that is moved over `data` frame)
+# @param tag      used to tag (user) classified data with
+# @param inc      increment by which we move sampling window (default is 10 events)
+# @param use.dct  flag controlling if DCT is used or not
+extractFeaturesWithTagFile = function(input, tagInput, size, tag, inc=10, use.dct = TRUE) {
+  csv = read.csv(file=input, header=TRUE)
+  tagIndex = read.csv(file=tagInput, col.names=c("start", "end"), header=FALSE)
+
+  result = NULL
+  for (window in windowSampling(csv, size, inc)) {
+    startIndex = as.integer(window[1])
+    endIndex = as.integer(window[2])
+    windowData = enrichDataWithFeatures(csv[startIndex:endIndex,], size)
+    labels = names(windowData)[(ncol(csv)+1):ncol(windowData)]
+
+    feature = if (use.dct) {
+      # We use a DCT to normalise data for training
+      as.data.frame(mvdct(as.matrix(windowData[,labels])))
+    } else {
+      as.data.frame(as.matrix(windowData[,labels]))
+    }
+
+    taggedFeature = if (nrow(subset(tagIndex, start <= startIndex & endIndex <= end)) > 0) {
+      print(paste("Tagging:", startIndex, "-", endIndex))
+      data.frame(c(tag, t(feature)))
+    } else {
+      data.frame(c("", t(feature)))
+    }
+    names(taggedFeature) = c("feature")
+    row.names(taggedFeature) = c("tag", sapply(labels, function(l) { sapply(0:(size-1), function(n) { paste(l, ".", n, sep="") }) }))
+
+    rbind(result, t(taggedFeature)) -> result
+  }
+
+  write.table(result, file=paste("svm-", tag, "-features", ".csv", sep=""), sep=",", row.names=FALSE, col.names=FALSE)
 }
 
 ########################################################################################################################
@@ -138,18 +225,23 @@ parameterCost = function(tag, data, testData, buckets, costParam, gammaParam) {
 
 # Function used to train a support vector machine (SVM). Trained SVM model is saved to a file.
 #
-# @param tag        tag that data has been (potentially) labeled with (for training)
-# @param size       size of sampling window
-# @param buckets    number of buckets or folds to be used
-# @param repeats    how many attempts at fitting a model for a given cost and gamma parameter
+# @param tag         tag that data has been (potentially) labeled with (for training)
+# @param sizeOpt     size of sampling window (x, y, z co-ordinates) or, if NULL, the explicit labels for the data are present in the CSV file headers
+# @param buckets     number of buckets or folds to be used
+# @param repeats     how many attempts at fitting a model for a given cost and gamma parameter
 # @param costParam
 # @param gammaParam
-trainSVM = function(tag, size, buckets = 10, repeats = 10, costParams = 10^(0:4), gammaParams = 10^(0:-4)) {
-  data = read.csv(file=paste("svm", "-", tag, "-features", ".csv", sep=""))
-  xLabels = lapply(rep(1:size), function(index) { paste("x", index, sep="") })
-  yLabels = lapply(rep(1:size), function(index) { paste("y", index, sep="") })
-  zLabels = lapply(rep(1:size), function(index) { paste("z", index, sep="") })
-  names(data) = c("tag", xLabels, yLabels, zLabels)
+trainSVM = function(tag, sizeOpt = NULL, buckets = 10, repeats = 10, costParams = 10^(0:4), gammaParams = 10^(0:-4)) {
+  if (is.null(sizeOpt)) {
+    data = read.csv(file=paste("svm", "-", tag, "-features", ".csv", sep=""), header=TRUE)
+  } else {
+    size = sizeOpt
+    xLabels = lapply(rep(1:size), function(index) { paste("x", index, sep="") })
+    yLabels = lapply(rep(1:size), function(index) { paste("y", index, sep="") })
+    zLabels = lapply(rep(1:size), function(index) { paste("z", index, sep="") })
+    data = read.csv(file=paste("svm", "-", tag, "-features", ".csv", sep=""), header=FALSE)
+    names(data) = c("tag", xLabels, yLabels, zLabels)
+  }
 
   sampleSize = nrow(data)
 
@@ -235,9 +327,11 @@ svm_predict = function(tag, rbf = radial_kernel) {
 # @param inc           distance by which sampling window will iteratively move
 # @param threshold     probability threshold - over this value and we classify window as being labeled by `tag`
 # @param model.predict function to be used in making model predictions (default is to use e1071 `predict` function)
-classify = function(input, tag, size, inc = 10, threshold = 0.75, model.predict = predict) {
+# @param use.dct       flag controlling if DCT is used or not
+classify = function(input, tag, size, inc = 10, threshold = 0.75, model.predict = predict, use.dct = TRUE) {
   svm = readRDS(paste("svm-model", "-", tag, "-features", ".rds", sep=""))
-  csv = read.csv(file=input, col.names=(c("x", "y", "z")))
+  csv = read.csv(file=input, col.names=(c("x", "y", "z")), header=FALSE) # For reading simple (x,y,z)-style file data
+  #csv = read.csv(file=input, header=TRUE) # Multipacket style file data
   xLabels = lapply(rep(1:size), function(index) { paste("x", index, sep="") })
   yLabels = lapply(rep(1:size), function(index) { paste("y", index, sep="") })
   zLabels = lapply(rep(1:size), function(index) { paste("z", index, sep="") })
@@ -256,11 +350,19 @@ classify = function(input, tag, size, inc = 10, threshold = 0.75, model.predict 
   for (window in windowSampling(csv, size, inc)) {
     startIndex = as.integer(window[1])
     endIndex = as.integer(window[2])
-    windowData = csv[startIndex:endIndex,]
-    featureVector = as.data.frame(mvdct(as.matrix(windowData)))
-    feature = data.frame(c(t(featureVector["x"]), t(featureVector["y"]), t(featureVector["z"])))
+    windowData = enrichDataWithFeatures(csv[startIndex:endIndex,], size)
+    labels = names(windowData)[(ncol(csv)+1):ncol(windowData)]
+
+    featureVector = if (use.dct) {
+      # We use a DCT to normalise data for classification
+      as.data.frame(mvdct(as.matrix(windowData[,labels])))
+    } else {
+      as.data.frame(as.matrix(windowData[,labels]))
+    }
+
+    feature = data.frame(c(t(featureVector)))
     names(feature) = c("feature")
-    row.names(feature) = c(xLabels, yLabels, zLabels)
+    row.names(feature) = sapply(labels, function(l) { sapply(0:(size-1), function(n) { paste(l, ".", n, sep="") }) })
 
     pred = model.predict(svm, t(feature), probability = TRUE)
     probability = as.data.frame(attr(pred, "probabilities"))

@@ -3,21 +3,24 @@ package com.eigengo.lift.exercise
 import java.util.{Date, UUID}
 
 import akka.actor.ActorRef
-import com.eigengo.lift.exercise.UserExercisesProcessor._
-import com.eigengo.lift.exercise.UserExercisesSessions._
+import com.eigengo.lift.Exercise.{Suggestions, Exercise, Metric}
 import spray.routing.Directives
 
 import scala.concurrent.ExecutionContext
+import scala.language.postfixOps
 
 trait ExerciseService extends Directives with ExerciseMarshallers {
   import akka.pattern.ask
   import com.eigengo.lift.common.Timeouts.defaults._
+  import UserExercisesProcessor._
+  import UserExercisesSessions._
+  import UserExercisesStatistics._
 
-  def exerciseRoute(userExercisesProcessor: ActorRef, userExercisesSessions: ActorRef)(implicit ec: ExecutionContext) =
+  def exerciseRoute(userExercisesProcessor: ActorRef, userExercisesSessions: ActorRef, userExercisesStatistics: ActorRef)(implicit ec: ExecutionContext) =
     path("exercise" / "musclegroups") {
       get {
         complete {
-          UserExercisesClassifier.supportedMuscleGroups
+          UserExercisesStatistics.supportedMuscleGroups
         }
       }
     } ~
@@ -96,10 +99,31 @@ trait ExerciseService extends Directives with ExerciseMarshallers {
         }
       }
     } ~
+    path("exercise" / UserIdValue / "classification") { userId ⇒
+      get {
+        parameter('muscleGroupKeys.as[String]?) { mgks ⇒
+          complete {
+            (userExercisesStatistics ? UserExerciseExplicitClassificationExamples(userId, None, mgks.map(_.split(",")))).mapRight[List[Exercise]]
+          }
+        }
+      }
+    } ~
+    path("exercise" / UserIdValue / "suggestions") {  userId ⇒
+      get {
+        complete {
+          (userExercisesStatistics ? UserGetExerciseSuggestions(userId)).mapTo[Suggestions]
+        }
+      } ~
+      post {
+        handleWith { suggestions: Suggestions ⇒
+          (userExercisesProcessor ? UserExerciseSetSuggestions(userId, suggestions)).mapRight[Unit]
+        }
+      }
+    } ~
     path("exercise" / UserIdValue / SessionIdValue / "classification") { (userId, sessionId) ⇒
       get {
         complete {
-          (userExercisesProcessor ? UserExerciseExplicitClassificationExamples(userId, sessionId)).mapTo[List[Exercise]]
+          (userExercisesStatistics ? UserExerciseExplicitClassificationExamples(userId, Some(sessionId), None)).mapRight[List[Exercise]]
         }
       } ~
       post {

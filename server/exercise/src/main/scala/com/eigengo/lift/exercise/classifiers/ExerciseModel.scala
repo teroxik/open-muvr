@@ -3,8 +3,9 @@ package com.eigengo.lift.exercise.classifiers
 import akka.actor.{ActorRef, ActorLogging}
 import akka.event.LoggingReceive
 import akka.stream.{ActorFlowMaterializer, ActorFlowMaterializerSettings}
-import akka.stream.actor.ActorPublisher
+import akka.stream.actor.{ActorPublisherMessage, ActorPublisher}
 import akka.stream.scaladsl._
+import scala.annotation.tailrec
 import scala.async.Async._
 import com.eigengo.lift.exercise.UserExercisesClassifier.ClassifiedExercise
 import com.eigengo.lift.exercise.classifiers.model.SMTInterface
@@ -35,15 +36,38 @@ object ExerciseModel {
 
   sealed trait Proposition
 
-  case class Assert(sensor: SensorDataSourceLocation, fact: Fact) extends Proposition
+  case object True extends Proposition {
+    override def toString = "true"
+  }
 
-  case class Conjunction(fact1: Proposition, fact2: Proposition, remainingFacts: Proposition*) extends Proposition
+  case object False extends Proposition {
+    override def toString = "false"
+  }
 
-  case class Disjunction(fact1: Proposition, fact2: Proposition, remainingFacts: Proposition*) extends Proposition
+  case class Assert(fact: Fact, sensor: SensorDataSourceLocation) extends Proposition {
+    override def toString = fact.toString(sensor)
+  }
+
+  case class Conjunction(fact1: Proposition, fact2: Proposition, remainingFacts: Proposition*) extends Proposition {
+    override def toString = (fact1 +: fact2 +: remainingFacts).mkString("(", " && ", ")")
+  }
+
+  case class Disjunction(fact1: Proposition, fact2: Proposition, remainingFacts: Proposition*) extends Proposition {
+    override def toString = (fact1 +: fact2 +: remainingFacts).mkString("(", " || ", ")")
+  }
 
   def not(fact: Proposition): Proposition = fact match {
-    case Assert(sensor, fact1) =>
-      Assert(sensor, ClassificationAssertions.not(fact1))
+    case True =>
+      False
+
+    case False =>
+      True
+
+    case Assert(Neg(fact1), sensor) =>
+      Assert(fact1, sensor)
+
+    case Assert(fact1: GroundFact, sensor) =>
+      Assert(Neg(fact1), sensor)
 
     case Conjunction(fact1, fact2, remaining @ _*) =>
       Disjunction(not(fact1), not(fact2), remaining.map(not): _*)
@@ -57,15 +81,25 @@ object ExerciseModel {
    */
   sealed trait Path
 
-  case class AssertFact(fact: Proposition) extends Path
+  case class AssertFact(fact: Proposition) extends Path {
+    override def toString = fact.toString
+  }
 
-  case class Test(query: Query) extends Path
+  case class Test(query: Query) extends Path {
+    override def toString = s"($query ?)"
+  }
 
-  case class Choice(path1: Path, path2: Path, remaining: Path*) extends Path
+  case class Choice(path1: Path, path2: Path, remaining: Path*) extends Path {
+    override def toString = (path1 +: path2 +: remaining).mkString("(", " + ", ")")
+  }
 
-  case class Sequence(path1: Path, path2: Path, remaining: Path*) extends Path
+  case class Sequence(path1: Path, path2: Path, remaining: Path*) extends Path {
+    override def toString = (path1 +: path2 +: remaining).mkString("(", "; ", ")")
+  }
 
-  case class Repeat(path: Path) extends Path
+  case class Repeat(path: Path) extends Path {
+    override def toString = s"($path *)"
+  }
 
   /**
    * Auxillary function that determines if a path only involves combinations of `Test` expressions (used by standard
@@ -95,15 +129,25 @@ object ExerciseModel {
    */
   sealed trait Query
 
-  case class Formula(fact: Proposition) extends Query
+  case class Formula(fact: Proposition) extends Query {
+    override def toString = fact.toString
+  }
 
-  case object TT extends Query
+  case object TT extends Query {
+    override def toString = "TT"
+  }
 
-  case object FF extends Query
+  case object FF extends Query {
+    override def toString = "FF"
+  }
 
-  case class And(query1: Query, query2: Query, remainingQueries: Query*) extends Query
+  case class And(query1: Query, query2: Query, remainingQueries: Query*) extends Query {
+    override def toString = (query1 +: query2 +: remainingQueries).mkString("(", " && ", ")")
+  }
 
-  case class Or(query1: Query, query2: Query, remainingQueries: Query*) extends Query
+  case class Or(query1: Query, query2: Query, remainingQueries: Query*) extends Query {
+    override def toString = (query1 +: query2 +: remainingQueries).mkString("(", " || ", ")")
+  }
 
   /**
    * Logical expressions that operate on path prefixes:
@@ -113,9 +157,13 @@ object ExerciseModel {
    * @param path  path prefix at end of which query should hold
    * @param query query that is to hold at end of a path prefix
    */
-  case class Exists(path: Path, query: Query) extends Query
+  case class Exists(path: Path, query: Query) extends Query {
+    override def toString = s"<$path> $query"
+  }
 
-  case class All(path: Path, query: Query) extends Query
+  case class All(path: Path, query: Query) extends Query {
+    override def toString = s"[$path] $query"
+  }
 
   /**
    * Convenience function that provides negation on queries, whilst keeping them in NNF. Translation is linear in the
@@ -147,12 +195,12 @@ object ExerciseModel {
   /**
    * Indicates that the exercise session has completed (remaining trace is empty)
    */
-  def End(location: SensorDataSourceLocation): Query = All(Test(Formula(Assert(location, True))), FF)
+  val End: Query = All(Test(Formula(True)), FF)
 
   /**
    * Denotes the last step of the exercise session
    */
-  def Last(location: SensorDataSourceLocation): Query = Exists(AssertFact(Assert(location, True)), End(location))
+  val Last: Query = All(AssertFact(True), End)
 
   /**
    * Following definitions allow linear-time logic to be encoded within the current logic. Translation here is linear in
@@ -162,23 +210,23 @@ object ExerciseModel {
   /**
    * At the next point of the exercise session, the query will hold
    */
-  def Next(location: SensorDataSourceLocation, query: Query): Query = Exists(AssertFact(Assert(location, True)), query)
+  def Next(query: Query): Query = Exists(AssertFact(True), query)
 
   /**
    * At some point in the exercise session, the query will hold
    */
-  def Diamond(location: SensorDataSourceLocation, query: Query): Query = Exists(Repeat(AssertFact(Assert(location, True))), query)
+  def Diamond(query: Query): Query = Exists(Repeat(AssertFact(True)), query)
 
   /**
    * For all points in the exercise session, the query holds
    */
-  def Box(location: SensorDataSourceLocation, query: Query): Query = All(Repeat(AssertFact(Assert(location, True))), query)
+  def Box(query: Query): Query = All(Repeat(AssertFact(True)), query)
 
   /**
    * Until query2 holds, query1 will hold in the exercise session. Query2 will hold at some point during the exercise
    * session.
    */
-  def Until(location: SensorDataSourceLocation, query1: Query, query2: Query): Query = Exists(Repeat(Sequence(Test(query1), AssertFact(Assert(location, True)))), query2)
+  def Until(query1: Query, query2: Query): Query = Exists(Repeat(Sequence(Test(query1), AssertFact(True))), query2)
 
   /**
    * Values representing the current evaluation state of a given query:
@@ -254,23 +302,27 @@ object ExerciseModel {
  * Exercising model interface. Implementations of this abstract class define specific exercising models that may be updated and queried.
  * Querying determines the states or points in time at which a `watch` query is satisfiable.
  */
-abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWatch: Set[ExerciseModel.Query] = Set.empty)
+abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWatch: Set[ExerciseModel.Query] = Set.empty)(implicit prover: SMTInterface)
   extends ActorPublisher[(SensorNetValue, ActorRef)]
   with ActorLogging {
 
-  this: SMTInterface =>
-
+  import ActorPublisherMessage._
   import context.dispatcher
   import ExerciseModel._
-  import FlowGraphImplicits._
+  import FlowGraph.Implicits._
 
   val config = context.system.settings.config
   val settings = ActorFlowMaterializerSettings(context.system)
   // Received sensor data is buffered - configuration data determines buffer size
   val bufferSize = config.getInt("classification.buffer")
   val samplingRate = config.getInt("classification.frequency")
+  val maxBufferSize = config.getInt("classification.model.receive.buffer")
 
   implicit val materializer = ActorFlowMaterializer(settings)
+
+  var buffer = Vector.empty[(SensorNetValue, ActorRef)]
+  var seenStop: Boolean = false
+  var calledOnComplete: Boolean = false
 
   /**
    * Defined by implementing subclasses. Given a new event in our sensor trace, determines the next state that our model
@@ -283,49 +335,69 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
   protected def evaluateQuery(current: Query)(event: BindToSensors, lastState: Boolean): QueryValue
 
   /**
-   * Defined by implementing subclasses. Determines the message sent back to the UserExercisesProcessor.
+   * Defined by implementing subclasses. Configurable flow that determines the (optional) message sent back to the
+   * UserExercisesProcessor.
    *
    * @param query  query that we have been requested to watch
-   * @param value  current model evaluated value for this query
-   * @param result currently evaluated result for this query
    */
-  protected def makeDecision(query: Query, value: QueryValue, result: Boolean): ClassifiedExercise
+  protected def makeDecision(query: Query): Flow[QueryValue, Option[ClassifiedExercise], Unit]
 
   /**
    * Defined by implementing subclasses. Configurable flow defined by implementing subclasses
    */
-  protected def workflow: Flow[SensorNetValue, BindToSensors]
+  protected def workflow: Flow[SensorNetValue, BindToSensors, Unit]
 
   /**
    * Flow that defines how per query evaluation influences decision making (and so messages received by UserExercisesProcessor)
    */
-  private def evaluate(query: Query) = {
+  private[classifiers] def evaluate(query: Query) = {
     require(toWatch.contains(query))
 
     var currentState: Query = query
     var stableState: Option[QueryValue] = None
 
-    Flow[List[BindToSensors]].map {
-      case _ if stableState.isDefined =>
-        stableState.get
+    // NOTE: as mutable state is updated by this flow, we need to ensure evaluation occurs in a "synchronous" step
+    Flow[List[BindToSensors]].mapAsync { sensorData =>
+      log.debug(if (sensorData.length == 1) s"\n  LAST EVENT: ${sensorData.head}" else s"\n  EVENT: ${sensorData.head}")
 
-      case List(event) =>
-        evaluateQuery(currentState)(event, lastState = true)
+      val result = sensorData match {
+        case _ if stableState.isDefined =>
+          stableState.get
 
-      case List(event, _) =>
-        evaluateQuery(currentState)(event, lastState = false)
-    }.mapAsync {
-      case UnstableValue(nextQuery) =>
-        async {
-          currentState = await(simplify(nextQuery))
+        case List(event) =>
+          evaluateQuery(currentState)(event, lastState = true)
 
-          makeDecision(query, UnstableValue(currentState), await(satisfiable(nextQuery)))
-        }
+        case List(event, _) =>
+          evaluateQuery(currentState)(event, lastState = false)
+      }
+      log.debug(s"\n  EVALUATE: $currentState\n  ~~> $result")
+      result match {
+        case UnstableValue(nextQuery) =>
+          async {
+            // We interact with the prover concurrently to determine validity of, satisfiability of and simplify `nextQuery`
+            val validQuery = prover.valid(nextQuery)
+            val satisfiableQuery = prover.satisfiable(nextQuery)
+            val simplifiedQuery = prover.simplify(nextQuery)
 
-      case value: StableValue =>
-        stableState = Some(value)
+            if (await(validQuery)) {
+              // `nextQuery` is valid - so any LDL unwinding of this formula will allow it to become true
+              StableValue(result = true)
+            } else if (await(satisfiableQuery)) {
+              // We need to unwind LDL formula further in order to determine its validity
+              currentState = await(simplifiedQuery)
+              // We pass on next query here to "facilitate" decision making on repeated query matching
+              UnstableValue(nextQuery)
+            } else {
+              // `nextQuery` is unsatisfiable - so no LDL unwinding of this formula will allow it to become true
+              StableValue(result = false)
+            }
+          }
 
-        Future(makeDecision(query, value, value.result))
+        case value: StableValue =>
+          stableState = Some(value)
+
+          Future(value)
+      }
     }
   }
 
@@ -335,48 +407,53 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
    *   - how (`watch`) queries are evaluated (i.e. `evaluateQuery`) over that trace
    *   - how decision messages (i.e. result of `makeDecision`) are relayed back to `UserExercisesProcessor`.
    */
-  private def model: FlowGraph = {
+  private def model: RunnableFlow[Unit] = {
     if (toWatch.isEmpty) {
       // No queries to watch, so we ignore all SensorNetValue's
-      FlowGraph { implicit builder =>
+      FlowGraph.closed() { implicit builder =>
         Source(ActorPublisher(self)) ~> Sink.ignore
       }
     } else if (toWatch.size == 1) {
       // We have at least one query to watch and report upon
-      FlowGraph { implicit builder =>
-        val split = Unzip[SensorNetValue, ActorRef]
-        val join = Zip[ClassifiedExercise, ActorRef]
+      FlowGraph.closed() { implicit builder =>
+        val split = builder.add(Unzip[SensorNetValue, ActorRef]())
+        val join = builder.add(Zip[Option[ClassifiedExercise], ActorRef]())
         val query = toWatch.head
 
-        Source(ActorPublisher(self)) ~> split.in
+        Source(ActorPublisher.apply[(SensorNetValue, ActorRef)](self)) ~> split.in
         // 2 element sliding window allows workflow to look ahead one step and determine if the event trace is in its last state or not
-        split.left ~> workflow.transform(() => SlidingWindow[BindToSensors](2)) ~> evaluate(query) ~> join.left
-        split.right ~> join.right
-        join.out ~> Sink.foreach[(ClassifiedExercise, ActorRef)] { case (exercise, ref) => ref ! exercise }
+        split.out0 ~> workflow.transform(() => SlidingWindow[BindToSensors](2)) ~> evaluate(query) ~> makeDecision(query) ~> join.in0
+        split.out1 ~> join.in1
+        join.out ~> Flow[(Option[ClassifiedExercise], ActorRef)]
+          .filter(_._1.nonEmpty)
+          .map { case (ex, ref) => (ex.get, ref) } ~> Sink.foreach[(ClassifiedExercise, ActorRef)] { case (exercise, ref) => ref ! exercise }
       }
     } else {
       // We have multiple queries to watch and report upon
-      FlowGraph { implicit builder =>
-        val split = Unzip[SensorNetValue, ActorRef]
-        val listener = Broadcast[ActorRef]
-        val event = Broadcast[List[BindToSensors]]
+      FlowGraph.closed() { implicit builder =>
+        val split = builder.add(Unzip[SensorNetValue, ActorRef]())
+        val listener = builder.add(Broadcast[ActorRef](toWatch.size))
+        val event = builder.add(Broadcast[List[BindToSensors]](toWatch.size))
 
-        Source(ActorPublisher(self)) ~> split.in
+        Source(ActorPublisher.apply[(SensorNetValue, ActorRef)](self)) ~> split.in
         // 2 element sliding window allows workflow to look ahead one step and determine if the event trace is in its last state or not
-        split.left ~> workflow.transform(() => SlidingWindow[BindToSensors](2)) ~> event
-        split.right ~> listener
+        split.out0 ~> workflow.transform(() => SlidingWindow[BindToSensors](2)) ~> event
+        split.out1 ~> listener
         for (query <- toWatch) {
-          val join = Zip[ClassifiedExercise, ActorRef]
+          val join = builder.add(Zip[Option[ClassifiedExercise], ActorRef]())
 
-          event ~> evaluate(query) ~> join.left
-          listener ~> join.right
-          join.out ~> Sink.foreach[(ClassifiedExercise, ActorRef)] { case (exercise, ref) => ref ! exercise }
+          event ~> evaluate(query) ~> makeDecision(query) ~> join.in0
+          listener ~> join.in1
+          join.out ~> Flow[(Option[ClassifiedExercise], ActorRef)]
+            .filter(_._1.nonEmpty)
+            .map { case (ex, ref) => (ex.get, ref) } ~> Sink.foreach[(ClassifiedExercise, ActorRef)] { case (exercise, ref) => ref ! exercise }
         }
       }
     }
   }
 
   override def preStart() = {
+    log.debug(s"Started model $name evaluation workflow for the queries: $toWatch")
     // Setup model evaluation workflow
     model.run()
   }
@@ -404,15 +481,59 @@ abstract class ExerciseModel(name: String, sessionProps: SessionProperties, toWa
         self.tell(evt, sender())
       }
 
+    /**
+     * We use a buffer to hold `SensorNetValue`s when there is no downstream demand
+     */
+
+    case event: SensorNetValue if buffer.size == maxBufferSize =>
+      log.error(s"No demand for the actor publisher and we received a SensorNet event, so dropping $event")
+
     case event: SensorNetValue =>
-      if (isActive && totalDemand > 0) {
+      if (seenStop) {
+        log.debug(s"Actor publisher has already received a stop message, so dropping $event")
+      } else if (isActive && buffer.isEmpty && totalDemand > 0) {
         onNext((event, sender()))
       } else if (isActive) {
-        // FIXME: do we need an internal buffer for storing excess SensorNetValue events?
-        log.error(s"No demand for the actor publisher and we received a SensorNet event, so dropping $event")
+        buffer :+= (event, sender())
+        deliverSensorNetValue()
       } else {
         log.warning(s"Actor publisher is inactive and we received a SensorNet event, so dropping $event")
       }
+
+    case Request(_) =>
+      if (!calledOnComplete) {
+        deliverSensorNetValue()
+        if (seenStop && buffer.isEmpty) {
+          onComplete()
+          calledOnComplete = true
+        }
+      }
+
+    // Allows the actor publisher's stream to be closed or completed
+    case 'Stop =>
+      if (!calledOnComplete) {
+        seenStop = true
+        if (buffer.isEmpty) {
+          onComplete()
+          calledOnComplete = true
+        }
+      }
+  }
+
+  @tailrec private def deliverSensorNetValue(): Unit = {
+    if (totalDemand > 0) {
+      // totalDemand is a Long and could be larger than what buf.splitAt can accept
+      if (totalDemand <= Int.MaxValue) {
+        val (use, keep) = buffer.splitAt(totalDemand.toInt)
+        buffer = keep
+        use.foreach { case (snv, ref) => onNext((snv, ref)) }
+      } else {
+        val (use, keep) = buffer.splitAt(Int.MaxValue)
+        buffer = keep
+        use.foreach { case (snv, ref) => onNext((snv, ref)) }
+        deliverSensorNetValue()
+      }
+    }
   }
 
 }

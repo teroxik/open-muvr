@@ -2,18 +2,19 @@ package com.eigengo.lift.exercise
 
 import java.util.{Date, UUID}
 
+import com.eigengo.lift.Exercise.{ExerciseIntensity, MuscleGroupKey}
+
 /**
  * The session identity
  * @param id the id
  */
-case class SessionId(id: UUID) extends AnyVal {
+@SerialVersionUID(1010l) case class SessionId(id: UUID) extends AnyVal {
   override def toString = id.toString
 }
-object SessionId {
+@SerialVersionUID(1011l) object SessionId {
   def apply(s: String): SessionId = SessionId(UUID.fromString(s))
   def randomId(): SessionId = SessionId(UUID.randomUUID())
 }
-
 
 /**
  * The exercise session props
@@ -21,7 +22,7 @@ object SessionId {
  * @param muscleGroupKeys the planned muscle groups
  * @param intendedIntensity the planned intensity
  */
-case class SessionProperties(startDate: Date,
+@SerialVersionUID(1022l) case class SessionProperties(startDate: Date,
                    muscleGroupKeys: Seq[MuscleGroupKey],
                    intendedIntensity: ExerciseIntensity) {
   require(intendedIntensity >  0.0, "intendedIntensity must be between <0, 1)")

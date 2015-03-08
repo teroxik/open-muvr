@@ -1,53 +1,65 @@
 import Foundation
 
-/**
- * Models an exercise session. 
- */
+///
+/// Models an exercise session.
+///
 class ExerciseSession : NSObject {
     internal var props: Exercise.SessionProps
     internal var id: NSUUID
     
-    /**
-     * Constructs a session with the given id, props and indicator whether the session is offline
-     * right from the start.
-     */
+    ///
+    /// Constructs a session with the given id, props and indicator whether the session is offline
+    /// right from the start.
+    ///
     init(id: NSUUID, props: Exercise.SessionProps) {
         self.id = id
         self.props = props
         super.init()
     }
     
-    /**
-     * Submits multi-packet for the current session
-     */
+    ///
+    /// Submits multi-packet for the current session
+    ///
     func submitData(mp: NSData, f: Result<Void> -> Void) -> Void {
         LiftServer.sharedInstance.exerciseSessionSubmitData(CurrentLiftUser.userId!, sessionId: id, data: mp, f: f)
     }
     
-    /**
-     * Ends the current session. After ending, this instance is not re-usable
-     */
+    ///
+    /// Ends the current session. After ending, this instance is not re-usable
+    ///
     func end(f: Result<Void> -> Void) -> Void {
         LiftServer.sharedInstance.exerciseSessionEnd(CurrentLiftUser.userId!, sessionId: id, f: f)
     }
     
-    /**
-     * Obtain classification examples for the given session
-     */
+    ///
+    /// Obtain classification examples for the given session, trying to retrieve the most specific ones
+    ///
     func getClassificationExamples(f: Result<[Exercise.Exercise]> -> Void) -> Void {
-        return LiftServer.sharedInstance.exerciseSessionGetClassificationExamples(CurrentLiftUser.userId!, sessionId: id, f)
+        return LiftServer.sharedInstance.exerciseSessionGetClassificationExamples(CurrentLiftUser.userId!, sessionId: id) { x in
+            if x.isSuccess() {
+                f(x)
+            } else {
+                LiftServer.sharedInstance.exerciseGetClassificationExamples(CurrentLiftUser.userId!, muscleGroupKeys: self.props.muscleGroupKeys) { x in
+                    if x.isSuccess() {
+                        f(x)
+                    } else {
+                        LiftServer.sharedInstance.exerciseGetClassificationExamples(CurrentLiftUser.userId!, f)
+                    }
+                }
+            }
+        }
     }
     
-    /** 
-     * Start explicit classification of the given exercise
-     */
+    ///
+    /// Start explicit classification of the given exercise
+    ///
     func startExplicitClassification(exercise: Exercise.Exercise) -> Void {
         LiftServer.sharedInstance.exerciseSessionStartExplicitClassification(CurrentLiftUser.userId!, sessionId: id, exercise: exercise, f: const(()))
     }
     
-    /** 
-     * End explicit classification
-     */
+    ///
+    /// End explicit classification
+    ///
     func endExplicitClassification() {
         LiftServer.sharedInstance.exerciseSessionEndExplicitClassification(CurrentLiftUser.userId!, sessionId: id, f: const(()))
     }

@@ -1,7 +1,6 @@
 package com.eigengo.lift.exercise.classifiers.model
 
 import akka.actor.ActorLogging
-import akka.stream.OverflowStrategy
 import akka.stream.scaladsl._
 import com.eigengo.lift.exercise.classifiers.ExerciseModel.Query
 import com.eigengo.lift.exercise.classifiers.workflows.{ClassificationAssertions, GestureWorkflows}
@@ -14,15 +13,13 @@ import com.eigengo.lift.exercise.classifiers.ExerciseModel
  * Essentially, we view our model traces as being streams here. As a result, all queries are evaluated (on the actual
  * stream) from the time point they are received by the model.
  */
-abstract class StandardExerciseModel(sessionProps: SessionProperties, tapSensor: SensorDataSourceLocation, toWatch: Set[Query] = Set.empty)
+abstract class StandardExerciseModel(sessionProps: SessionProperties, tapSensor: SensorDataSourceLocation, toWatch: Set[Query] = Set.empty)(implicit prover: SMTInterface)
   extends ExerciseModel("tap", sessionProps, toWatch)
   with StandardEvaluation
   with ActorLogging {
 
-  this: SMTInterface =>
-
   import ClassificationAssertions._
-  import FlowGraphImplicits._
+  import FlowGraph.Implicits._
 
   // Workflow for recognising 'tap' gestures that are detected via `tapSensor`
   object Tap extends GestureWorkflows("tap", context.system.settings.config)
@@ -31,24 +28,19 @@ abstract class StandardExerciseModel(sessionProps: SessionProperties, tapSensor:
    * Monitor wrist sensor and add in tap gesture detection.
    */
   val workflow = {
-    val in = UndefinedSource[SensorNetValue]
-    val out = UndefinedSink[BindToSensors]
-
-    PartialFlowGraph { implicit builder =>
+    Flow() { implicit builder =>
       val classifier = Tap.identifyEvent
-      val split = Broadcast[SensorNetValue]
-      val merge = Zip[Set[Fact], SensorNetValue]
-
-      in ~> split
+      val split = builder.add(Broadcast[SensorNetValue](2))
+      val merge = builder.add(Zip[Set[Fact], SensorNetValue]())
 
       split ~> Flow[SensorNetValue]
         .mapConcat(_.toMap(tapSensor).find(_.isInstanceOf[AccelerometerValue]).asInstanceOf[Option[AccelerometerValue]].toList)
-        .via(classifier.map(_.toSet)) ~> merge.left
+        .via(classifier.map(_.toSet)) ~> merge.in0
 
-      split ~> merge.right
+      split ~> merge.in1
 
-      merge.out ~> Flow[(Set[Fact], SensorNetValue)].map { case (facts, data) => BindToSensors(facts, Set(), Set(), Set(), Set(), data) } ~> out
-    }.toFlow(in, out)
+      (split.in, merge.out)
+    }.via(Flow[(Set[Fact], SensorNetValue)].map { case (facts, data) => BindToSensors(facts, Set(), Set(), Set(), Set(), data) })
   }
 
 }

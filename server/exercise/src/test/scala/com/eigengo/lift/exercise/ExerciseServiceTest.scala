@@ -4,13 +4,13 @@ import java.text.SimpleDateFormat
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.testkit.{ImplicitSender, TestActor, TestKitBase, TestProbe}
+import com.eigengo.lift.Exercise._
 import com.eigengo.lift.common.UserId
-import com.eigengo.lift.exercise.UserExercisesClassifier.MuscleGroup
 import com.eigengo.lift.exercise.UserExercisesProcessor._
 import com.eigengo.lift.exercise.UserExercisesSessions._
+import com.eigengo.lift.exercise.UserExercisesStatistics.UserGetExerciseSuggestions
 import org.scalatest.{FlatSpec, Matchers}
-import scodec.bits.BitVector
-import spray.http.HttpEntity
+import spray.http.{ContentTypes, HttpEntity}
 import spray.testkit.ScalatestRouteTest
 
 import scalaz._
@@ -23,7 +23,8 @@ object ExerciseServiceTest {
     val userId = UserId.randomId()
     val sessionId = SessionId.randomId()
 
-    val squat = Exercise("squat", Some(1.0), None)
+    val squatName = "squat"
+    val squat = Exercise(squatName, Some(1.0), None)
     val intensity = Some(1.0)
     val startDate = dateFormat.parse("1970-01-01")
     val endDate = dateFormat.parse("1970-01-01")
@@ -37,6 +38,31 @@ object ExerciseServiceTest {
       0x00, 0x04, 0x01, 0xff, 0x01, 0x02, 0x03,
       0x00, 0x02, 0x02, 0xf0, 0x01).map(_.toByte)
     val emptyResponse = "{}"
+
+    val suggestionsEntity = HttpEntity(ContentTypes.`application/json`,
+      """
+        |[
+        |   { "date":"2015-02-20",
+        |     "source":"history",
+        |     "muscleGroupKeys": ["arms"],
+        |     "intensity": 1.0
+        |   },
+        |   { "date":"2015-02-21",
+        |     "source":"programme"
+        |   },
+        |   { "date":"2015-02-22",
+        |     "source": { "notes":"Chop, chop" },
+        |     "muscleGroupKeys": ["legs"],
+        |     "intensity":0.8
+        |   }
+        |]
+      """.stripMargin)
+
+    val suggestions = Suggestions(
+      Suggestion.Session(dateFormat.parse("2015-02-20"), SuggestionSource.History, List("arms"), 1.0) ::
+        Suggestion.Rest(dateFormat.parse("2015-02-21"), SuggestionSource.Programme) ::
+        Suggestion.Session(dateFormat.parse("2015-02-22"), SuggestionSource.Trainer("Chop, chop"), List("legs"), 0.8) :: Nil
+    )
   }
 
   def probe(implicit system: ActorSystem) = {
@@ -45,26 +71,33 @@ object ExerciseServiceTest {
     probe.setAutoPilot {
       new TestActor.AutoPilot {
         def run(sender: ActorRef, msg: Any) = msg match {
-          case UserExerciseSessionStart(_, _) =>
+          case UserExerciseSessionStart(_, _) ⇒
             sender ! \/.right(TestData.userId.id)
             TestActor.KeepRunning
-          case UserGetExerciseSessionsSummary(_, _, _) =>
+          case UserGetExerciseSessionsSummary(_, _, _) ⇒
             sender ! TestData.sessionSummary
             TestActor.KeepRunning
-          case UserGetExerciseSession(_, _) =>
+          case UserGetExerciseSession(_, _) ⇒
             sender ! TestData.session
             TestActor.KeepRunning
-          case UserExerciseDataProcessMultiPacket(_, _, _) =>
+          case UserExerciseDataProcessMultiPacket(_, _, _) ⇒
             sender ! \/.right(())
             TestActor.KeepRunning
-          case UserGetExerciseSessionsDates(_) =>
+          case UserGetExerciseSessionsDates(_) ⇒
             sender ! TestData.sessionDates
             TestActor.KeepRunning
-          case UserExerciseSessionEnd(_, _) =>
+          case UserExerciseSessionEnd(_, _) ⇒
             sender ! \/.right(())
             TestActor.KeepRunning
-          case UserExerciseExplicitClassificationStart(_, _, _) =>
-            sender ! List(TestData.squat)
+          case UserExerciseExplicitClassificationStart(_, _, _) ⇒
+	    sender ! List(TestData.squatName)
+
+            TestActor.KeepRunning
+          case UserExerciseSetSuggestions(_, _) ⇒
+            sender ! \/.right(())
+            TestActor.KeepRunning
+          case UserGetExerciseSuggestions(_) ⇒
+            sender ! TestData.suggestions
             TestActor.KeepRunning
         }
       }
@@ -87,13 +120,13 @@ class ExerciseServiceTest
 
   val probe = ExerciseServiceTest.probe
 
-  val underTest = exerciseRoute(probe.ref, probe.ref)
+  val underTest = exerciseRoute(probe.ref, probe.ref, probe.ref)
 
   val dateFormat = new SimpleDateFormat("yyyy-MM-dd")
 
   "The Exercise service" should "listen at GET /exercise/musclegroups endpoint" in {
     Get("/exercise/musclegroups") ~> underTest ~> check {
-      responseAs[List[MuscleGroup]] should be(UserExercisesClassifier.supportedMuscleGroups)
+      responseAs[List[MuscleGroup]] should be(UserExercisesStatistics.supportedMuscleGroups)
     }
   }
 
@@ -149,6 +182,22 @@ class ExerciseServiceTest
     mp.packets(1).sourceLocation should be(SensorDataSourceLocationWaist)
   }
 
+  it should "listen at POST exercise/:UserIdValue/suggestions endpoint" in {
+    Post(s"/exercise/${TestData.userId.id}/suggestions").withEntity(TestData.suggestionsEntity) ~> underTest ~> check {
+      response.entity.asString should be(TestData.emptyResponse)
+    }
+
+    probe.expectMsg(UserExerciseSetSuggestions(TestData.userId, TestData.suggestions))
+  }
+
+  it should "listen at GET exercise/:UserIdValue/suggestions endpoint" in {
+    Get(s"/exercise/${TestData.userId.id}/suggestions") ~> underTest ~> check {
+      response.entity.asString.replaceAll("\\W","") should be(TestData.suggestionsEntity.asString.replaceAll("\\W",""))
+    }
+
+    probe.expectMsg(UserGetExerciseSuggestions(TestData.userId))
+  }
+
   it should "listen at POST exercise/:UserIdValue/:SessionIdValue/end endpoint" in {
     Post(s"/exercise/${TestData.userId.id}/${TestData.sessionId.id}/end") ~> underTest ~> check {
       response.entity.asString should be(TestData.emptyResponse)
@@ -164,4 +213,5 @@ class ExerciseServiceTest
 
     probe.expectMsg(UserExerciseExplicitClassificationStart(TestData.userId, TestData.sessionId, TestData.squat))
   }
+
 }

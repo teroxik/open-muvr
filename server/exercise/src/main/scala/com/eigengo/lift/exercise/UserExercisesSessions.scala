@@ -5,7 +5,8 @@ import java.util.{Calendar, Date}
 import akka.actor.{ActorRef, ActorLogging, Props}
 import akka.contrib.pattern.ShardRegion
 import akka.persistence.{SnapshotOffer, PersistentView}
-import com.eigengo.lift.common.{AutoPassivation, UserId}
+import com.eigengo.lift.Exercise.{Metric, ExerciseIntensity, Exercise}
+import com.eigengo.lift.common.{UserId, AutoPassivation}
 import com.eigengo.lift.notification.NotificationProtocol.DataMessagePayload
 import com.eigengo.lift.profile.UserProfileNotifications
 
@@ -272,6 +273,9 @@ class UserExercisesSessions(notification: ActorRef, userProfile: ActorRef) exten
   }
 
   private def inASet(session: ExerciseSession, set: ExerciseSet): Receive = {
+    case ExerciseStartClassificationEvt(_, exerciseName) if isPersistent ⇒
+      log.debug("ExerciseStartClassificationEvt: in a set -> exercising.")
+      context.become(exercising(session.withNewExerciseSet(set)).orElse(queries))
     case ExerciseEvt(_, metadata, exercise) if isPersistent ⇒
       log.debug("ExerciseEvt: in a set -> in a set.")
       context.become(inASet(session, set.withNewExercise(metadata, exercise)).orElse(queries))
@@ -296,6 +300,10 @@ class UserExercisesSessions(notification: ActorRef, userProfile: ActorRef) exten
   }
   
   private def exercising(session: ExerciseSession): Receive = {
+    case ExerciseStartClassificationEvt(_, exercise) if isPersistent ⇒
+      log.debug("ExerciseStartClassificationEvt: exercising -> in a set.")
+      context.become(inASet(session, ExerciseSet(ModelMetadata.user, exercise)).orElse(queries))
+
     case ExerciseEvt(_, metadata, exercise) if isPersistent ⇒
       log.debug("ExerciseEvt: exercising -> in a set.")
       context.become(inASet(session, ExerciseSet(metadata, exercise)).orElse(queries))

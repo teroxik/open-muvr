@@ -1,12 +1,14 @@
 /**
  * Based on https://github.com/kevinschmidt/docker-spark
  *
- * If made dependent on common results on large amount of new dependency conflicts
- * Including akka etc.
- * 
- * If Spark version 1.2.0 used again large amount of new dependency conflicts
+ * Currently uses spark 1.2.0, Scala 2.11
  *
- * Potentially upgradeable to Scala 2.11
+ * If made dependent on common results on large amount of new dependency conflicts including akka etc.
+ *
+ * Large amount of files causes "Invalid or Corrupt jarfile is encountered" due to bug in java 7
+ * Possible workarounds include use of java 8 (current solution) or startup using java -cp instead of java -jar
+ * See http://stackoverflow.com/questions/18441076/why-java-complains-about-jar-files-with-lots-of-entries
+ *
  */
 
 import Dependencies._
@@ -15,13 +17,17 @@ Build.Settings.project
 
 name := "spark"
 
-scalaVersion := "2.11.4"
+scalaVersion := "2.10.4"
 
 libraryDependencies ++= Seq(
-  slf4j_simple,
+  slf4j.slf4j_api,
+  slf4j.slf4j_simple,
   akkaAnalytics.cassandra,
   spark.core,
-  spark.mllib
+  spark.mllib,
+  spray.client,
+  hadoop.client,
+  scodec_bits
   //spark.streaming,
   //spark.streamingKafka
 )
@@ -40,9 +46,11 @@ dockerfile in docker := {
   val artifact = (outputPath in assembly).value
   val artifactTargetPath = s"/app/${artifact.name}"
   new Dockerfile {
-    from("java:openjdk-8-jdk")
+    from("martinz/spark-singlenode:latest")
     add(artifact, artifactTargetPath)
-    entryPoint("java", "-jar", artifactTargetPath)
+    //run("sh", "/root/spark_singlenode_files/default_cmd")
+      //entryPoint("java", "-jar", artifactTargetPath)
+    entryPoint("sh", "/root/spark_singlenode_files/default_cmd", artifactTargetPath)
   }
 }
 

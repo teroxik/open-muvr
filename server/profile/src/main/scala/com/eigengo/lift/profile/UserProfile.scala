@@ -3,7 +3,7 @@ package com.eigengo.lift.profile
 import akka.actor.{ActorLogging, Props}
 import akka.contrib.pattern.ShardRegion
 import akka.persistence.{PersistentActor, SnapshotOffer}
-import com.eigengo.lift.common.{AutoPassivation, UserId}
+import com.eigengo.lift.common.{UserId, AutoPassivation}
 import com.eigengo.lift.notification.NotificationProtocol.{Device, Devices}
 
 object UserProfile {
@@ -34,17 +34,17 @@ object UserProfile {
   }
 
   /**
-   * Sets the user's device
-   * @param device the device
-   */
-  case class DeviceSet(device: Device)
-
-  /**
    * Registers a user
    * @param userId the user to be added
    * @param account the user account
    */
-  case class UserRegistered(userId: UserId, account: Account)
+  @SerialVersionUID(1014l) case class UserRegistered(userId: UserId, account: Account)
+
+  /**
+   * Sets the user's device
+   * @param device the device
+   */
+  case class DeviceSet(device: Device)
 
   /**
    * Device has been set

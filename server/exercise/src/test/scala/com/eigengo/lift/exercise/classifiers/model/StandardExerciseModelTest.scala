@@ -6,8 +6,8 @@ import akka.stream.testkit.{StreamTestKit, AkkaSpec}
 import akka.testkit.TestActorRef
 import com.eigengo.lift.exercise.UserExercisesClassifier.{Tap => TapEvent}
 import com.eigengo.lift.exercise.classifiers.ExerciseModel
-import com.eigengo.lift.exercise.classifiers.workflows.ClassificationAssertions.{NegGesture, Gesture, BindToSensors}
-import com.eigengo.lift.exercise.{SensorDataSourceLocationWrist, AccelerometerValue, SensorNetValue, SessionProperties}
+import com.eigengo.lift.exercise.classifiers.workflows.ClassificationAssertions.{Neg, Gesture, BindToSensors}
+import com.eigengo.lift.exercise._
 import com.typesafe.config.ConfigFactory
 import java.text.SimpleDateFormat
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,14 +33,17 @@ class StandardExerciseModelTest extends AkkaSpec(ConfigFactory.load("classificat
     IOSource.fromURL(dataFile, "UTF-8").getLines().map(line => { val List(x, y, z) = line.split(",").toList.map(_.toInt); AccelerometerValue(x, y, z) })
   }.get.toList
   val dummyValue = AccelerometerValue(0, 0, 0)
+  implicit val prover = new SMTInterface {
+    def simplify(query: Query)(implicit ec: ExecutionContext) = Future(query)
+    def satisfiable(query: Query)(implicit ec: ExecutionContext) = Future(true)
+    def valid(query: Query)(implicit ec: ExecutionContext) = Future(true)
+  }
 
   "StandardExerciseModel workflow" must {
 
-    def component(in: Source[SensorNetValue], out: Sink[BindToSensors]) = {
-      val workflow = TestActorRef(new StandardExerciseModel(sessionProps, SensorDataSourceLocationWrist) with SMTInterface {
-        def makeDecision(query: Query, value: QueryValue, result: Boolean) = TapEvent
-        def simplify(query: Query)(implicit ec: ExecutionContext) = Future(query)
-        def satisfiable(query: Query)(implicit ec: ExecutionContext) = Future(true)
+    def component(in: Source[SensorNetValue, _], out: Sink[BindToSensors, _]) = {
+      val workflow = TestActorRef(new StandardExerciseModel(sessionProps, SensorDataSourceLocationWrist) {
+        def makeDecision(query: Query) = Flow[QueryValue].map(_ => Some(TapEvent))
       }).underlyingActor.workflow
       workflow.runWith(in, out)
     }
@@ -48,7 +51,7 @@ class StandardExerciseModelTest extends AkkaSpec(ConfigFactory.load("classificat
     "correctly detect wrist sensor taps" in {
       // FIXME: is this correct?
       val msgs: List[SensorNetValue] = accelerometerData.map(d => SensorNetValue(Vector(d), Vector(dummyValue), Vector(dummyValue), Vector(dummyValue), Vector(dummyValue)))
-      val tapIndex = List(256 until 290, 341 until 344, 379 until 408, 546 until 577).flatten.toList
+      val tapIndex = List(380 until 382, 383 until 389, 390 until 393, 394 until 401, 402 until 404, 549 until 556, 557 until 559, 561 until 570).flatten.toList
       // Simulate source that outputs messages and then blocks
       val in = PublisherProbe[SensorNetValue]()
       val out = SubscriberProbe[BindToSensors]()
@@ -63,7 +66,7 @@ class StandardExerciseModelTest extends AkkaSpec(ConfigFactory.load("classificat
       }
 
       for (index <- 0 to (msgs.length - windowSize)) {
-        val fact = if (tapIndex.contains(index)) Gesture(name, threshold) else NegGesture(name, threshold)
+        val fact = if (tapIndex.contains(index)) Gesture(name, threshold) else Neg(Gesture(name, threshold))
 
         out.expectNext(BindToSensors(Set(fact), Set(), Set(), Set(), Set(), msgs(index)))
       }

@@ -103,6 +103,7 @@ class SensorDataGroup {
             let count = header[1]
             let samplesPerSecond = header[2]
             let sampleSize = header[3]
+            let offset = header[4]
 
             let length = Int(count) * Int(sampleSize)
             if data.length < headerSize + length {
@@ -110,7 +111,8 @@ class SensorDataGroup {
             }
             let key = SensorDataArrayHeader(sourceDeviceId: id, type: type, sampleSize: sampleSize, samplesPerSecond: samplesPerSecond)
             let samples = data.subdataWithRange(NSMakeRange(headerSize, length))
-            let sensorData = SensorData(startTime: time, samples: samples)
+            let offsetedTime = time - CFTimeInterval(Double(offset) * Double(count) / Double(samplesPerSecond))
+            let sensorData = SensorData(startTime: offsetedTime, samples: samples)
             if let x = (sensorDataArrays.find { $0.header == key }) {
                 x.append(sensorData: sensorData, maximumGap: gap, gapValue: gapValue)
             } else {
@@ -321,7 +323,7 @@ class SensorDataArray {
             let currentStart = data.startTime
             let lastEnd = last.endTime(header.sampleSize, samplesPerSecond: header.samplesPerSecond)
             if currentStart < lastEnd {
-                let bytesToRemove = Int(ceil(Double(lastEnd - currentStart) * Double(header.samplesPerSecond))) * Int(header.sampleSize)
+                let bytesToRemove = Int(round(Double(lastEnd - currentStart) * Double(header.samplesPerSecond))) * Int(header.sampleSize)
                 last.removeFromEnd(bytesToRemove)
                 last.append(samples: data.samples)
                 return
@@ -353,13 +355,41 @@ class SensorDataArray {
         sensorDatas = r
     }
     
+    private func samplesInTimeInterval(interval: CFTimeInterval, samplesPerSecond: UInt8) -> Int {
+        return max(0, Int(round(interval * CFTimeInterval(samplesPerSecond))))
+    }
+    
+    private func bytesInTimeInterval(interval: CFTimeInterval, samplesPerSecond: UInt8, sampleSize: UInt8) -> Int {
+        return Int(sampleSize) * samplesInTimeInterval(interval, samplesPerSecond: samplesPerSecond)
+    }
+    
+    private func closestSampleTime(time: CFAbsoluteTime, sampleStartTime: CFAbsoluteTime, samplesPerSecond: UInt8) -> CFAbsoluteTime {
+        let sps = CFTimeInterval(samplesPerSecond)
+        return sampleStartTime + round((time - sampleStartTime) * sps) / sps
+    }
+    
     ///
     /// Computes slice of all sensor datas here into a continuous SDA, if possible
     ///
     func slice(range: TimeRange, maximumGap gap: CFTimeInterval, gapValue: UInt8) -> ContinuousSensorDataArray? {
+        let epsilon = 0.001
         let samplesPerSecond = header.samplesPerSecond
         let sampleSize = header.sampleSize
-        let bufferBytesCount = Int(floor(range.length * CFTimeInterval(samplesPerSecond) * CFTimeInterval(sampleSize)))
+        let slicesInRange = sensorDatas.flatMap { (current: SensorData) -> (CFAbsoluteTime, CFAbsoluteTime, [UInt8])? in
+            if let slice = current.sliceSamples(range, sampleSize: sampleSize, samplesPerSecond: samplesPerSecond) {
+                return (current.startTime, current.endTime(sampleSize, samplesPerSecond: samplesPerSecond), slice)
+            }
+            return nil
+        }
+        
+        if slicesInRange.isEmpty { return nil }
+        
+        let firstSlice = slicesInRange.minBy { $0.0 }!
+        let lastSlice = slicesInRange.maxBy { $0.1 }!
+        let bufferStartTime = closestSampleTime(range.start + epsilon, sampleStartTime: firstSlice.0, samplesPerSecond: samplesPerSecond)
+        let bufferEndTime = closestSampleTime(range.end, sampleStartTime: lastSlice.0, samplesPerSecond: samplesPerSecond)
+        let bufferRange = bufferEndTime - bufferStartTime
+        let bufferBytesCount = bytesInTimeInterval(bufferRange, samplesPerSecond: samplesPerSecond, sampleSize: sampleSize)
         if bufferBytesCount > 10 * 1024 * 1024 {
             // more than 10 MiB is almost certainly wrong
             fatalError("Request to allocate \(bufferBytesCount) B.")
@@ -367,18 +397,9 @@ class SensorDataArray {
         
         var buffer = [UInt8](count: bufferBytesCount, repeatedValue: gapValue)
         
-        let slicesInRange = sensorDatas.flatMap { (current: SensorData) -> (CFAbsoluteTime, [UInt8])? in
-            if let slice = current.sliceSamples(range, sampleSize: sampleSize, samplesPerSecond: samplesPerSecond) {
-                return (current.startTime, slice)
-            }
-            return nil
-        }
-        
-        if slicesInRange.isEmpty { return nil }
-        
         let slicesOrdered = slicesInRange.sorted { $0.0 <= $1.0 } // Order by start.
-        for (start, bytes) in slicesOrdered {
-            let bufferRangeStart = max (0, Int(floor((start - range.start) * CFTimeInterval(samplesPerSecond) * CFTimeInterval(sampleSize))))
+        for (start, end, bytes) in slicesOrdered {
+            let bufferRangeStart = bytesInTimeInterval(start - bufferStartTime, samplesPerSecond: samplesPerSecond, sampleSize: sampleSize)
             let bufferRangeCount = min(bufferBytesCount - bufferRangeStart, bytes.count)
             if bufferRangeCount > 0 {
                 buffer[bufferRangeStart..<(bufferRangeStart + bufferRangeCount)] = bytes[0..<bufferRangeCount]
@@ -480,7 +501,7 @@ class SensorData {
         let endTime = startTime + duration(sampleSize, samplesPerSecond: samplesPerSecond)
         let endGap = until - endTime
         if endGap > 0 {
-            let length = Int( endGap * Double(samplesPerSecond) * Double(sampleSize) )
+            let length = Int(round(endGap * Double(samplesPerSecond))) * Int(sampleSize)
             appendGap(length, gapValue: gapValue, toData: samples)
         }
     }
@@ -563,8 +584,8 @@ class SensorData {
         let thisRange = TimeRange(start: startTime, end: endTime(sampleSize, samplesPerSecond: samplesPerSecond))
         if !range.intersects(thisRange) { return nil }
         
-        let startIndex = max(0, Int(ceil(((range.start - thisRange.start) * CFTimeInterval(samplesPerSecond) * CFTimeInterval(sampleSize)))))
-        let count = min(samples.length - startIndex, Int(floor(range.length * CFTimeInterval(samplesPerSecond) * CFTimeInterval(sampleSize))))
+        let startIndex = max(0, Int(round(((range.start - thisRange.start) * CFTimeInterval(samplesPerSecond))) * CFTimeInterval(sampleSize)))
+        let count = min(samples.length - startIndex, Int(round((range.end - thisRange.start) * CFTimeInterval(samplesPerSecond)) * CFTimeInterval(sampleSize)))
         if count <= 0 { return nil }
         if count > 10 * 1024 * 1024 {
             fatalError("Request to slice \(count) B")

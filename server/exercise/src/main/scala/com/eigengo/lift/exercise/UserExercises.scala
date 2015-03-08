@@ -1,17 +1,19 @@
 package com.eigengo.lift.exercise
 
+import com.eigengo.lift.Exercise.{Metric, Exercise, ExerciseName, Suggestions}
+
 object UserExercises {
 
   /**
    * Model version and other metadata
    * @param version the model version
    */
-  case class ModelMetadata(version: Int)
+  @SerialVersionUID(1000l) case class ModelMetadata(version: Int)
 
   /**
    * The MD companion
    */
-  object ModelMetadata {
+  @SerialVersionUID(1001l) object ModelMetadata {
     /** Special user-classified metadata */
     val user = ModelMetadata(-1231344)
   }
@@ -36,7 +38,7 @@ object UserExercises {
    * @param sessionId the session identity
    * @param sessionProps the session props
    */
-  case class SessionStartedEvt(sessionId: SessionId, sessionProps: SessionProperties)
+  @SerialVersionUID(1018l) case class SessionStartedEvt(sessionId: SessionId, sessionProps: SessionProperties)
 
   /**
    * The session has been abandoned. Typically, the mobile application has detected a loss of
@@ -53,10 +55,23 @@ object UserExercises {
   case class SessionDeletedEvt(sessionId: SessionId)
 
   /**
+   * Received exercise suggestions
+   * @param suggestions the suggestions
+   */
+  case class ExerciseSuggestionsSetEvt(suggestions: Suggestions)
+
+  /**
    * The session has ended
    * @param sessionId the session id
    */
   case class SessionEndedEvt(sessionId: SessionId)
+
+  /**
+   * Manual classification started event.
+   * @param sessionId the session id
+   * @param exercise the exercise
+   */
+  case class ExerciseStartClassificationEvt(sessionId: SessionId, exercise: Exercise)
 
   /**
    * Exercise event received for the given session with model metadata and exercise
@@ -64,7 +79,7 @@ object UserExercises {
    * @param metadata the model metadata
    * @param exercise the result
    */
-  case class ExerciseEvt(sessionId: SessionId, metadata: ModelMetadata, exercise: Exercise)
+  @SerialVersionUID(1002l) case class ExerciseEvt(sessionId: SessionId, metadata: ModelMetadata, exercise: Exercise)
 
   /**
    * Explicit (user-provided through tapping the device, for example) of exercise set.

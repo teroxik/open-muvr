@@ -21,6 +21,7 @@ libraryDependencies ++= Seq(
   spray.routing,
   // Json
   json4s.native,
+  json4s.jackson,
   // Codec
   scodec_bits,
   scalaz.core,
@@ -28,7 +29,7 @@ libraryDependencies ++= Seq(
   parboiled,
   // Apple push notifications
   apns,
-  slf4j_simple,
+  slf4j.slf4j_simple,
   // For improving future based chaining
   async,
   // Testing

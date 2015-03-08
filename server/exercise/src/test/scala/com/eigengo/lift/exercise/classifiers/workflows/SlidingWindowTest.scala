@@ -15,7 +15,7 @@ class SlidingWindowTest extends AkkaSpec {
   val windowSize = 10
   assert(windowSize > 1)
 
-  def sample(in: Source[String], out: Sink[List[String]]) =
+  def sample(in: Source[String, _], out: Sink[List[String], _]) =
     Flow[String].transform(() => SlidingWindow[String](windowSize)).runWith(in, out)
 
   "SlidingWindow" must {

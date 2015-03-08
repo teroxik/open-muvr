@@ -45,7 +45,7 @@ class GestureWorkflows(name: String, config: Config) extends SVMClassifier {
   /**
    * Flow that taps the in stream and, if a gesture is recognised, sends a `Fact` message to the `out` sink.
    */
-  def identifyEvent: Flow[AccelerometerValue, Option[Fact]] =
+  def identifyEvent: Flow[AccelerometerValue, Option[Fact], Unit] =
     Flow[AccelerometerValue]
       .transform(() => SlidingWindow[AccelerometerValue](windowSize))
       .map { (sample: List[AccelerometerValue]) =>
@@ -56,7 +56,7 @@ class GestureWorkflows(name: String, config: Config) extends SVMClassifier {
           if (matchProbability >= threshold) {
             Some(Gesture(name, threshold))
           } else {
-            Some(NegGesture(name, threshold))
+            Some(Neg(Gesture(name, threshold)))
           }
         } else {
           // Truncated windows are never classified (these typically occur when the stream closes)
