@@ -46,15 +46,22 @@ docker <<= (docker dependsOn assembly)
 dockerfile in docker := {
   val artifact = (outputPath in assembly).value
   val artifactTargetPath = s"/app/${artifact.name}"
+  val debTargetPath = "/app/debs"
   new Dockerfile {
     from("dockerfile/java")
     val f = new File(s"${Path.userHome.absolutePath}/.ios")
     if (f.exists) add(f, "/root/.ios")
     add(artifact, artifactTargetPath)
-    // Install CVC4, JNI shared library/bindings - used by exercise classification models
-    runShell("echo", "deb http://cvc4.cs.nyu.edu/debian unstable/", ">>", "/etc/apt/sources.list")
+    val d = new File(s"${sourceDirectory.value}/../../debs")
+    if (d.exists) add(d, debTargetPath)
     run("apt-get", "update")
-    run("apt-get", "install", "-y", "--force-yes", "cvc4", "libcvc4bindings-java3")
+    // Install CVC4, JNI shared library/bindings - used by exercise classification models
+    //
+    // NOTE: Debian packages (i.e. `cvc4` and `libcvc4bindings-java3`) in the `debs` directory are (currently)
+    // sourced from:
+    //   deb http://cvc4.cs.nyu.edu/debian unstable/
+    run("apt-get", "install", "-y", "--force-yes", "libantlr3c-3.2-0")
+    run("dpkg", "-R", "-i", debTargetPath)
     entryPoint("java", "-jar", artifactTargetPath)
   }
 }
